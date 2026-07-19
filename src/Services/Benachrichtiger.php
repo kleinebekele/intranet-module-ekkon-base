@@ -57,6 +57,7 @@ class Benachrichtiger
                 'text' => $text,
                 'daten' => $daten,
                 'quelle' => $quelle,
+                'meldungsart' => $meldungsart,
                 'status' => 'ohne_ziel',
             ], $this->schluessel($idempotenzSchluessel, 'ohne_ziel', $meldungsart));
 
@@ -87,6 +88,7 @@ class Benachrichtiger
                     'text' => $text,
                     'daten' => $daten,
                     'quelle' => $quelle,
+                    'meldungsart' => $meldungsart,
                     'status' => 'pending',
                 ], $this->schluessel($idempotenzSchluessel, $route->typ, $ziel));
 

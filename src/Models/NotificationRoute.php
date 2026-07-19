@@ -44,6 +44,23 @@ class NotificationRoute extends Model
         return $this->belongsTo(\App\Models\User::class, 'mail_user_id');
     }
 
+    /**
+     * Eine einzelne Zieladresse für die Vorschau-Vorbefüllung (nur Mail).
+     * Bei „alle Admins" leer – dort gibt es keine EINE Adresse.
+     */
+    public function vorschauMail(): string
+    {
+        if ($this->typ !== 'mail' || $this->mail_an_admins) {
+            return '';
+        }
+
+        if ($this->mail_user_id) {
+            return (string) ($this->mailUser?->email ?? '');
+        }
+
+        return (string) $this->mail_empfaenger;
+    }
+
     /** Kurzbeschreibung des Ziels für die Übersicht. */
     public function zielText(): string
     {

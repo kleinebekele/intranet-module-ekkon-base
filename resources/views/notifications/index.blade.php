@@ -4,11 +4,11 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen' }">
 
             {{-- Fehler aus Validierung/Test. Erfolg rendert das Core-Layout selbst. --}}
             @if ($errors->any())
-                <div class="rounded-lg bg-red-100 text-red-800 px-4 py-3 text-sm">
+                <div class="mb-6 rounded-lg bg-red-100 text-red-800 px-4 py-3 text-sm">
                     <ul class="list-disc list-inside space-y-1">
                         @foreach ($errors->all() as $fehler)
                             <li>{{ $fehler }}</li>
@@ -17,14 +17,31 @@
                 </div>
             @endif
 
+            {{-- ── Tab-Leiste ───────────────────────────────────────────── --}}
+            <nav class="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
+                @php
+                    $tabs = [
+                        'routen' => 'Routen',
+                        'channels' => 'Teams-Channels',
+                        'meldungen' => 'Offene Meldungen',
+                    ];
+                @endphp
+                @foreach ($tabs as $key => $label)
+                    <button type="button" @click="tab = '{{ $key }}'"
+                            :class="tab === '{{ $key }}'
+                                ? 'border-indigo-600 text-indigo-700'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition">{{ $label }}</button>
+                @endforeach
+            </nav>
+
             {{-- ── Routen ───────────────────────────────────────────────── --}}
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+            <div x-show="tab === 'routen'" class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-semibold text-gray-700 mb-1">Routen</h3>
                 <p class="text-sm text-gray-500 mb-4">
                     Eine Zeile = <b>ein Ziel</b> für <b>eine Meldungsart</b>. Für Teams <i>und</i> Mail
-                    einfach zwei Zeilen anlegen. Die Meldungsarten kommen aus den Tasks selbst –
-                    darum ein Dropdown statt Freitext: Ein Tippfehler würde die Meldung lautlos
-                    ins Nichts routen.
+                    einfach zwei Zeilen anlegen. Bei Mail führt die Meldungsart zur <b>Mailvorlage</b>,
+                    die verschickt wird.
                 </p>
 
                 @if ($routes->isEmpty())
@@ -45,7 +62,12 @@
                                 @foreach ($routes as $route)
                                     <tr class="border-b last:border-0">
                                         <td class="py-2 pr-4 font-mono text-xs">
-                                            {{ $route->meldungsart }}
+                                            @if ($route->typ === 'mail' && \Illuminate\Support\Facades\Route::has('admin.mailvorlagen.edit'))
+                                                <a href="{{ route('admin.mailvorlagen.edit', 'ekkon:'.$route->meldungsart) }}{{ $route->vorschauMail() ? '?testmail='.urlencode($route->vorschauMail()) : '' }}"
+                                                   class="text-indigo-600 hover:underline" title="Mailvorlage bearbeiten">{{ $route->meldungsart }}</a>
+                                            @else
+                                                {{ $route->meldungsart }}
+                                            @endif
                                             @unless (array_key_exists($route->meldungsart, $meldungsarten))
                                                 {{-- Task umbenannt/entfernt: Die Route läuft ins Leere. --}}
                                                 <span class="ml-1 text-xs font-semibold text-red-700 bg-red-100 rounded px-2 py-0.5"
@@ -146,7 +168,7 @@
             </div>
 
             {{-- ── Teams-Channels ───────────────────────────────────────── --}}
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+            <div x-show="tab === 'channels'" x-cloak class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-semibold text-gray-700 mb-1">Teams-Channels</h3>
                 <p class="text-sm text-gray-500 mb-4">
                     Der klassische „Incoming Webhook" ist seit Ende 2025 abgeschaltet.
@@ -236,7 +258,7 @@
             </div>
 
             {{-- ── Warteschlange ────────────────────────────────────────── --}}
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+            <div x-show="tab === 'meldungen'" x-cloak class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-semibold text-gray-700 mb-1">Offene &amp; auffällige Meldungen</h3>
                 <p class="text-sm text-gray-500 mb-4">
                     <b>ohne_ziel</b> heißt: Ein Task hat gemeldet, aber keine Route passte –

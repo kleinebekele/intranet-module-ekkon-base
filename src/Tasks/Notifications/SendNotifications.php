@@ -132,6 +132,25 @@ class SendNotifications extends EkkonTask
     private function mail(Notification $n): ?string
     {
         try {
+            // Bevorzugt über die bearbeitbare Vorlage `ekkon:<meldungsart>`
+            // (HTML + Text, gerahmt). Der Versand läuft über den Mail-Ausgangs-
+            // korb – dort greift auch die Zustellbarkeitsprüfung.
+            if ($this->vorlageVorhanden($n)) {
+                app(\App\Mail\Vorlagen\VorlagenMailer::class)->senden(
+                    'ekkon:'.$n->meldungsart,
+                    (string) $n->ziel,
+                    [
+                        'titel' => (string) $n->titel,
+                        'text' => (string) $n->text,
+                        'quelle' => (string) ($n->quelle ?: '—'),
+                    ],
+                );
+
+                return null;
+            }
+
+            // Rückfall: roher Text (Core ohne Mailvorlagen-System oder Altzeile
+            // ohne Meldungsart).
             $text = (string) $n->text;
 
             if (($n->daten ?? []) !== []) {
@@ -152,6 +171,14 @@ class SendNotifications extends EkkonTask
             // abstürzen lassen.
             return mb_substr($e->getMessage(), 0, 300);
         }
+    }
+
+    /** Gibt es für diese Meldungsart eine registrierte Mailvorlage? */
+    private function vorlageVorhanden(Notification $n): bool
+    {
+        return $n->meldungsart
+            && class_exists(\App\Mail\Vorlagen\VorlagenRegister::class)
+            && app(\App\Mail\Vorlagen\VorlagenRegister::class)->finden('ekkon:'.$n->meldungsart) !== null;
     }
 
     /** Zugestelltes nach 14 Tagen wegräumen – wie bei ekkon_task_runs. */

@@ -55,6 +55,12 @@ class EkkonServiceProvider extends ModuleServiceProvider
     {
         parent::boot();
 
+        // Für JEDE Meldungsart eine bearbeitbare Mailvorlage im Core-Register
+        // anmelden (`ekkon:<meldungsart>`). Läuft in Web UND Konsole: im Web für
+        // die Bearbeitung unter Verwaltung → Mailvorlagen, in der Konsole für den
+        // Versand durch SendNotifications.
+        $this->benachrichtigungsVorlagenAnmelden();
+
         if (! $this->app->runningInConsole()) {
             return;
         }
@@ -83,4 +89,57 @@ class EkkonServiceProvider extends ModuleServiceProvider
             })->dailyAt('04:15');
         });
     }
+
+    /**
+     * Je deklarierter Meldungsart eine Mailvorlage im Core-Register anmelden.
+     *
+     * Erst wenn alle Provider geladen sind (`booted`), stehen alle Tasks und
+     * damit alle Meldungsarten fest. Ohne das Core-Mailvorlagen-System (älterer
+     * Core) passiert nichts – die Ekkon-Mails fallen dann auf reinen Text
+     * zurück (siehe SendNotifications).
+     */
+    private function benachrichtigungsVorlagenAnmelden(): void
+    {
+        if (! class_exists(\App\Mail\Vorlagen\VorlagenRegister::class)) {
+            return;
+        }
+
+        $this->app->booted(function (): void {
+            $register = $this->app->make(\App\Mail\Vorlagen\VorlagenRegister::class);
+            $arten = $this->app->make(TaskRegistry::class)->meldungsarten();
+
+            foreach ($arten as $art => $klartext) {
+                $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                    schluessel: 'ekkon:'.$art,
+                    titel: 'Benachrichtigung: '.$klartext,
+                    beschreibung: 'Mail für die Ekkon-Meldungsart „'.$klartext.'". Wird verschickt, '
+                        .'wenn dafür eine Mail-Route existiert. Der Text kommt vom auslösenden Task '
+                        .'(Platzhalter {{ text }}).',
+                    platzhalter: [
+                        'titel' => 'Überschrift/Betreff der Meldung',
+                        'text' => 'Der Meldungstext vom Task (kann einen Link enthalten)',
+                        'quelle' => 'Auslösender Task',
+                    ],
+                    betreff: '{{ titel }}',
+                    html: self::MELDUNG_HTML,
+                    text: self::MELDUNG_TEXT,
+                ));
+            }
+        });
+    }
+
+    private const MELDUNG_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;font-weight:bold;">{{ titel }}</p>
+<div style="margin:0 0 16px;white-space:pre-line;color:#374151;">{{ text }}</div>
+<p style="margin:0;color:#9ca3af;font-size:12px;">Ausgelöst von: {{ quelle }}</p>
+HTML;
+
+    private const MELDUNG_TEXT = <<<'TEXT'
+{{ titel }}
+
+{{ text }}
+
+—
+Ausgelöst von: {{ quelle }}
+TEXT;
 }
