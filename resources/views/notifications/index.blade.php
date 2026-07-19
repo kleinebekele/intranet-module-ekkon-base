@@ -17,6 +17,134 @@
                 </div>
             @endif
 
+            {{-- ── Routen ───────────────────────────────────────────────── --}}
+            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+                <h3 class="font-semibold text-gray-700 mb-1">Routen</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Eine Zeile = <b>ein Ziel</b> für <b>eine Meldungsart</b>. Für Teams <i>und</i> Mail
+                    einfach zwei Zeilen anlegen. Die Meldungsarten kommen aus den Tasks selbst –
+                    darum ein Dropdown statt Freitext: Ein Tippfehler würde die Meldung lautlos
+                    ins Nichts routen.
+                </p>
+
+                @if ($routes->isEmpty())
+                    <p class="text-sm text-gray-500 mb-4 italic">Noch keine Route – gemeldet wird also noch nichts.</p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm mb-4">
+                            <thead class="text-left text-gray-500 border-b">
+                                <tr>
+                                    <th class="py-2 pr-4">Meldungsart</th>
+                                    <th class="py-2 pr-4">Typ</th>
+                                    <th class="py-2 pr-4">Ziel</th>
+                                    <th class="py-2 pr-4">Status</th>
+                                    <th class="py-2 pr-4">Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($routes as $route)
+                                    <tr class="border-b last:border-0">
+                                        <td class="py-2 pr-4 font-mono text-xs">
+                                            {{ $route->meldungsart }}
+                                            @unless (array_key_exists($route->meldungsart, $meldungsarten))
+                                                {{-- Task umbenannt/entfernt: Die Route läuft ins Leere. --}}
+                                                <span class="ml-1 text-xs font-semibold text-red-700 bg-red-100 rounded px-2 py-0.5"
+                                                      title="Kein Task deklariert diese Meldungsart (mehr).">verwaist</span>
+                                            @endunless
+                                        </td>
+                                        <td class="py-2 pr-4">{{ $route->typ }}</td>
+                                        <td class="py-2 pr-4">{{ $route->zielText() }}</td>
+                                        <td class="py-2 pr-4">
+                                            @if ($route->aktiv)
+                                                <span class="text-xs font-semibold text-green-700 bg-green-100 rounded px-2 py-0.5">aktiv</span>
+                                            @else
+                                                <span class="text-xs font-semibold text-gray-500 bg-gray-100 rounded px-2 py-0.5">aus</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-2 pr-4">
+                                            <div class="flex flex-wrap gap-2">
+                                                <form method="POST" action="{{ route('module.ekkon.notifications.route.toggle', $route) }}">
+                                                    @csrf
+                                                    <button class="text-gray-600 hover:underline">{{ $route->aktiv ? 'deaktivieren' : 'aktivieren' }}</button>
+                                                </form>
+                                                <form method="POST" action="{{ route('module.ekkon.notifications.route.destroy', $route) }}"
+                                                      onsubmit="return confirm('Route wirklich löschen?')">
+                                                    @csrf @method('DELETE')
+                                                    <button class="text-red-700 hover:underline">löschen</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
+                @if (empty($meldungsarten))
+                    <p class="text-sm text-gray-500 italic border-t pt-4">
+                        Kein Task deklariert bisher Meldungsarten (<code>$meldungsarten</code>).
+                    </p>
+                @else
+                    <form method="POST" action="{{ route('module.ekkon.notifications.route.store') }}"
+                          x-data="{ typ: '{{ old('typ', 'mail') }}', mailZiel: '{{ old('mail_ziel', 'admins') }}' }"
+                          class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end border-t pt-4">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Meldungsart</label>
+                            <select name="meldungsart" class="w-full rounded-md border-gray-300 text-sm">
+                                @foreach ($meldungsarten as $art => $klartext)
+                                    <option value="{{ $art }}" @selected(old('meldungsart') === $art)>{{ $klartext }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Typ</label>
+                            <select name="typ" x-model="typ" class="w-full rounded-md border-gray-300 text-sm">
+                                <option value="mail">Mail</option>
+                                <option value="teams">Teams</option>
+                            </select>
+                        </div>
+                        <div x-show="typ === 'mail'" x-cloak>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Mail an</label>
+                            <select name="mail_ziel" x-model="mailZiel" class="w-full rounded-md border-gray-300 text-sm">
+                                <option value="admins">alle System-Admins</option>
+                                <option value="benutzer">bestimmten Administrator</option>
+                                <option value="adresse">feste Adresse</option>
+                            </select>
+                        </div>
+                        <div x-show="typ === 'mail' && mailZiel === 'benutzer'" x-cloak>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Administrator</label>
+                            <select name="mail_user_id" class="w-full rounded-md border-gray-300 text-sm">
+                                <option value="">– bitte wählen –</option>
+                                @foreach ($admins as $admin)
+                                    <option value="{{ $admin->id }}" @selected(old('mail_user_id') == $admin->id)>{{ $admin->name }} ({{ $admin->email }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div x-show="typ === 'mail' && mailZiel === 'adresse'" x-cloak>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Adresse</label>
+                            <input name="mail_empfaenger" type="email" value="{{ old('mail_empfaenger') }}"
+                                   class="w-full rounded-md border-gray-300 text-sm" placeholder="name@firma.de">
+                        </div>
+                        <div x-show="typ === 'teams'" x-cloak>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Channel</label>
+                            <select name="teams_channel_id" class="w-full rounded-md border-gray-300 text-sm">
+                                <option value="">– bitte wählen –</option>
+                                @foreach ($channels as $channel)
+                                    <option value="{{ $channel->id }}" @selected(old('teams_channel_id') == $channel->id)>{{ $channel->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="md:col-span-4">
+                            <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                                Route anlegen
+                            </button>
+                        </div>
+                    </form>
+                @endif
+            </div>
+
             {{-- ── Teams-Channels ───────────────────────────────────────── --}}
             <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-semibold text-gray-700 mb-1">Teams-Channels</h3>
@@ -105,124 +233,6 @@
                         </button>
                     </div>
                 </form>
-            </div>
-
-            {{-- ── Routen ───────────────────────────────────────────────── --}}
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
-                <h3 class="font-semibold text-gray-700 mb-1">Routen</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Eine Zeile = <b>ein Ziel</b> für <b>eine Meldungsart</b>. Für Teams <i>und</i> Mail
-                    einfach zwei Zeilen anlegen. Die Meldungsarten kommen aus den Tasks selbst –
-                    darum ein Dropdown statt Freitext: Ein Tippfehler würde die Meldung lautlos
-                    ins Nichts routen.
-                </p>
-
-                @if ($routes->isEmpty())
-                    <p class="text-sm text-gray-500 mb-4 italic">Noch keine Route – gemeldet wird also noch nichts.</p>
-                @else
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm mb-4">
-                            <thead class="text-left text-gray-500 border-b">
-                                <tr>
-                                    <th class="py-2 pr-4">Meldungsart</th>
-                                    <th class="py-2 pr-4">Typ</th>
-                                    <th class="py-2 pr-4">Ziel</th>
-                                    <th class="py-2 pr-4">Status</th>
-                                    <th class="py-2 pr-4">Aktion</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($routes as $route)
-                                    <tr class="border-b last:border-0">
-                                        <td class="py-2 pr-4 font-mono text-xs">
-                                            {{ $route->meldungsart }}
-                                            @unless (array_key_exists($route->meldungsart, $meldungsarten))
-                                                {{-- Task umbenannt/entfernt: Die Route läuft ins Leere. --}}
-                                                <span class="ml-1 text-xs font-semibold text-red-700 bg-red-100 rounded px-2 py-0.5"
-                                                      title="Kein Task deklariert diese Meldungsart (mehr).">verwaist</span>
-                                            @endunless
-                                        </td>
-                                        <td class="py-2 pr-4">{{ $route->typ }}</td>
-                                        <td class="py-2 pr-4">{{ $route->zielText() }}</td>
-                                        <td class="py-2 pr-4">
-                                            @if ($route->aktiv)
-                                                <span class="text-xs font-semibold text-green-700 bg-green-100 rounded px-2 py-0.5">aktiv</span>
-                                            @else
-                                                <span class="text-xs font-semibold text-gray-500 bg-gray-100 rounded px-2 py-0.5">aus</span>
-                                            @endif
-                                        </td>
-                                        <td class="py-2 pr-4">
-                                            <div class="flex flex-wrap gap-2">
-                                                <form method="POST" action="{{ route('module.ekkon.notifications.route.toggle', $route) }}">
-                                                    @csrf
-                                                    <button class="text-gray-600 hover:underline">{{ $route->aktiv ? 'deaktivieren' : 'aktivieren' }}</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('module.ekkon.notifications.route.destroy', $route) }}"
-                                                      onsubmit="return confirm('Route wirklich löschen?')">
-                                                    @csrf @method('DELETE')
-                                                    <button class="text-red-700 hover:underline">löschen</button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-
-                @if (empty($meldungsarten))
-                    <p class="text-sm text-gray-500 italic border-t pt-4">
-                        Kein Task deklariert bisher Meldungsarten (<code>$meldungsarten</code>).
-                    </p>
-                @else
-                    <form method="POST" action="{{ route('module.ekkon.notifications.route.store') }}"
-                          x-data="{ typ: '{{ old('typ', 'teams') }}', mailZiel: '{{ old('mail_ziel', 'admins') }}' }"
-                          class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end border-t pt-4">
-                        @csrf
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Meldungsart</label>
-                            <select name="meldungsart" class="w-full rounded-md border-gray-300 text-sm">
-                                @foreach ($meldungsarten as $art => $klartext)
-                                    <option value="{{ $art }}" @selected(old('meldungsart') === $art)>{{ $klartext }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Typ</label>
-                            <select name="typ" x-model="typ" class="w-full rounded-md border-gray-300 text-sm">
-                                <option value="teams">Teams</option>
-                                <option value="mail">Mail</option>
-                            </select>
-                        </div>
-                        <div x-show="typ === 'teams'">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Channel</label>
-                            <select name="teams_channel_id" class="w-full rounded-md border-gray-300 text-sm">
-                                <option value="">– bitte wählen –</option>
-                                @foreach ($channels as $channel)
-                                    <option value="{{ $channel->id }}" @selected(old('teams_channel_id') == $channel->id)>{{ $channel->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div x-show="typ === 'mail'" x-cloak>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Mail an</label>
-                            <select name="mail_ziel" x-model="mailZiel" class="w-full rounded-md border-gray-300 text-sm">
-                                <option value="admins">System-Admins</option>
-                                <option value="adresse">feste Adresse</option>
-                            </select>
-                        </div>
-                        <div x-show="typ === 'mail' && mailZiel === 'adresse'" x-cloak>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Adresse</label>
-                            <input name="mail_empfaenger" type="email" value="{{ old('mail_empfaenger') }}"
-                                   class="w-full rounded-md border-gray-300 text-sm" placeholder="name@firma.de">
-                        </div>
-                        <div class="md:col-span-4">
-                            <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-                                Route anlegen
-                            </button>
-                        </div>
-                    </form>
-                @endif
             </div>
 
             {{-- ── Warteschlange ────────────────────────────────────────── --}}

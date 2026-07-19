@@ -32,6 +32,18 @@ class NotificationRoute extends Model
         ];
     }
 
+    /** @return BelongsTo<TeamsChannel, $this> */
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(TeamsChannel::class, 'teams_channel_id');
+    }
+
+    /** Der einzelne Ziel-Benutzer (Mail an einen bestimmten Administrator). */
+    public function mailUser(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'mail_user_id');
+    }
+
     /** Kurzbeschreibung des Ziels für die Übersicht. */
     public function zielText(): string
     {
@@ -39,12 +51,16 @@ class NotificationRoute extends Model
             return $this->channel?->name ?? '⚠ Channel gelöscht';
         }
 
-        return $this->mail_an_admins ? 'System-Admins' : (string) $this->mail_empfaenger;
-    }
+        if ($this->mail_an_admins) {
+            return 'System-Admins';
+        }
 
-    /** @return BelongsTo<TeamsChannel, $this> */
-    public function channel(): BelongsTo
-    {
-        return $this->belongsTo(TeamsChannel::class, 'teams_channel_id');
+        if ($this->mail_user_id) {
+            $user = $this->mailUser;
+
+            return $user ? $user->name.' ('.$user->email.')' : '⚠ Benutzer gelöscht';
+        }
+
+        return (string) $this->mail_empfaenger;
     }
 }

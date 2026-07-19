@@ -121,6 +121,14 @@ class Benachrichtiger
                 ->all();
         }
 
+        // Ein bestimmter Benutzer: Adresse FRISCH auflösen, damit die Route einem
+        // späteren Adresswechsel folgt. Gelöscht/ohne Adresse ⇒ kein Ziel.
+        if ($route->mail_user_id) {
+            $mail = (string) (\App\Models\User::query()->whereKey($route->mail_user_id)->value('email') ?? '');
+
+            return $mail === '' ? [] : [$mail];
+        }
+
         $adresse = (string) $route->mail_empfaenger;
 
         return $adresse === '' ? [] : [$adresse];

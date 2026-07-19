@@ -31,7 +31,10 @@ class NotificationController extends Controller
     {
         return view('ekkon::notifications.index', [
             'channels' => TeamsChannel::query()->orderBy('name')->get(),
-            'routes' => NotificationRoute::query()->with('channel')->orderBy('meldungsart')->get(),
+            'routes' => NotificationRoute::query()->with(['channel', 'mailUser'])->orderBy('meldungsart')->get(),
+            // Auswahl für „Mail an einen bestimmten Administrator".
+            'admins' => \App\Models\User::query()->where('is_admin', true)
+                ->orderBy('name')->get(['id', 'name', 'email']),
             // Dropdown-Quelle: nur Meldungsarten, die ein Task auch wirklich
             // deklariert. Freitext wäre eine lautlose Fehlerquelle.
             'meldungsarten' => $this->registry->meldungsarten(),
@@ -114,30 +117,43 @@ class NotificationController extends Controller
 
     public function routeStore(Request $request): RedirectResponse
     {
-        $anAdmins = $request->input('typ') === 'mail' && $request->input('mail_ziel') === 'admins';
+        // Bei Mail eines von drei Zielen: alle Admins, ein bestimmter Benutzer,
+        // oder eine feste Adresse.
+        $mailZiel = $request->input('typ') === 'mail' ? $request->input('mail_ziel', 'admins') : null;
 
         $daten = $request->validate([
             'meldungsart' => ['required', 'string', Rule::in(array_keys($this->registry->meldungsarten()))],
             'typ' => ['required', Rule::in(['mail', 'teams'])],
             'teams_channel_id' => ['nullable', 'exists:ekkon_teams_channels,id', 'required_if:typ,teams'],
-            // Feste Adresse nur nötig, wenn NICHT an die Admins geht.
-            'mail_empfaenger' => ['nullable', 'email', Rule::requiredIf(fn () => $request->input('typ') === 'mail' && ! $anAdmins)],
+            'mail_ziel' => ['nullable', Rule::in(['admins', 'benutzer', 'adresse'])],
+            // Feste Adresse nur nötig, wenn Mail-Ziel „feste Adresse" ist.
+            'mail_empfaenger' => ['nullable', 'email', Rule::requiredIf(fn () => $mailZiel === 'adresse')],
+            // Benutzer nur nötig, wenn Mail-Ziel „bestimmter Benutzer" ist.
+            'mail_user_id' => ['nullable', 'exists:users,id', Rule::requiredIf(fn () => $mailZiel === 'benutzer')],
         ]);
 
-        // Sauber halten: Beim Wechsel des Typs/Ziels soll kein verwaistes Feld
-        // stehenbleiben, sonst rätselt man später über tote Werte.
+        // Sauber halten: nur das Feld des gewählten Ziels behalten, der Rest null.
+        $werte = [
+            'meldungsart' => $daten['meldungsart'],
+            'typ' => $daten['typ'],
+            'teams_channel_id' => null,
+            'mail_empfaenger' => null,
+            'mail_an_admins' => false,
+            'mail_user_id' => null,
+            'aktiv' => true,
+        ];
+
         if ($daten['typ'] === 'teams') {
-            $daten['mail_empfaenger'] = null;
-            $daten['mail_an_admins'] = false;
+            $werte['teams_channel_id'] = $daten['teams_channel_id'];
+        } elseif ($mailZiel === 'admins') {
+            $werte['mail_an_admins'] = true;
+        } elseif ($mailZiel === 'benutzer') {
+            $werte['mail_user_id'] = $daten['mail_user_id'];
         } else {
-            $daten['teams_channel_id'] = null;
-            $daten['mail_an_admins'] = $anAdmins;
-            if ($anAdmins) {
-                $daten['mail_empfaenger'] = null;
-            }
+            $werte['mail_empfaenger'] = $daten['mail_empfaenger'];
         }
 
-        NotificationRoute::create($daten + ['aktiv' => true]);
+        NotificationRoute::create($werte);
 
         return back()->with('status', 'Route angelegt.');
     }
