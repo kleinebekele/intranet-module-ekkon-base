@@ -28,7 +28,18 @@ class NotificationRoute extends Model
     {
         return [
             'aktiv' => 'boolean',
+            'mail_an_admins' => 'boolean',
         ];
+    }
+
+    /** Kurzbeschreibung des Ziels für die Übersicht. */
+    public function zielText(): string
+    {
+        if ($this->typ === 'teams') {
+            return $this->channel?->name ?? '⚠ Channel gelöscht';
+        }
+
+        return $this->mail_an_admins ? 'System-Admins' : (string) $this->mail_empfaenger;
     }
 
     /** @return BelongsTo<TeamsChannel, $this> */

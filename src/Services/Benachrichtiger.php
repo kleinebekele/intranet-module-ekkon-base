@@ -67,32 +67,63 @@ class Benachrichtiger
         $uebersprungen = 0;
 
         foreach ($routen as $route) {
-            $ziel = $route->typ === 'teams'
-                ? (string) $route->teams_channel_id
-                : (string) $route->mail_empfaenger;
+            // Eine Route kann in MEHRERE Ziele aufgehen – „an die System-Admins"
+            // ist je Admin eine eigene Zeile. Teams/feste Adresse = genau eins.
+            $ziele = $this->zieleFuer($route);
 
-            // Route ohne Ziel ist ein Konfigurationsfehler – nicht stillschweigend
-            // eine leere Mail verschicken.
-            if ($ziel === '') {
+            // Keine Ziele (leere Adresse, kein Admin vorhanden) = Konfigurations-
+            // fehler, nicht stillschweigend eine leere Mail verschicken.
+            if ($ziele === []) {
                 $uebersprungen++;
 
                 continue;
             }
 
-            $neu = $this->anlegen([
-                'typ' => $route->typ,
-                'ziel' => $ziel,
-                'titel' => $titel,
-                'text' => $text,
-                'daten' => $daten,
-                'quelle' => $quelle,
-                'status' => 'pending',
-            ], $this->schluessel($idempotenzSchluessel, $route->typ, $ziel));
+            foreach ($ziele as $ziel) {
+                $neu = $this->anlegen([
+                    'typ' => $route->typ,
+                    'ziel' => $ziel,
+                    'titel' => $titel,
+                    'text' => $text,
+                    'daten' => $daten,
+                    'quelle' => $quelle,
+                    'status' => 'pending',
+                ], $this->schluessel($idempotenzSchluessel, $route->typ, $ziel));
 
-            $neu ? $angelegt++ : $uebersprungen++;
+                $neu ? $angelegt++ : $uebersprungen++;
+            }
         }
 
         return ['angelegt' => $angelegt, 'ohne_ziel' => false, 'uebersprungen' => $uebersprungen];
+    }
+
+    /**
+     * Die konkreten Ziele einer Route – aufgelöst beim Anlegen (Routing-Prinzip).
+     *
+     * @return string[] Teams: eine Channel-ID · feste Adresse: eine Mailadresse ·
+     *                  „an die Admins": je eine Adresse pro Administrator
+     */
+    private function zieleFuer(NotificationRoute $route): array
+    {
+        if ($route->typ === 'teams') {
+            $id = (string) $route->teams_channel_id;
+
+            return $id === '' ? [] : [$id];
+        }
+
+        if ($route->mail_an_admins) {
+            return \App\Models\User::query()
+                ->where('is_admin', true)
+                ->whereNotNull('email')
+                ->orderBy('email')
+                ->pluck('email')
+                ->map(fn ($m) => (string) $m)
+                ->all();
+        }
+
+        $adresse = (string) $route->mail_empfaenger;
+
+        return $adresse === '' ? [] : [$adresse];
     }
 
     /**

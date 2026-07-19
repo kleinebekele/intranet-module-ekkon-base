@@ -143,9 +143,7 @@
                                             @endunless
                                         </td>
                                         <td class="py-2 pr-4">{{ $route->typ }}</td>
-                                        <td class="py-2 pr-4">
-                                            {{ $route->typ === 'teams' ? ($route->channel?->name ?? '⚠ Channel gelöscht') : $route->mail_empfaenger }}
-                                        </td>
+                                        <td class="py-2 pr-4">{{ $route->zielText() }}</td>
                                         <td class="py-2 pr-4">
                                             @if ($route->aktiv)
                                                 <span class="text-xs font-semibold text-green-700 bg-green-100 rounded px-2 py-0.5">aktiv</span>
@@ -179,7 +177,7 @@
                     </p>
                 @else
                     <form method="POST" action="{{ route('module.ekkon.notifications.route.store') }}"
-                          x-data="{ typ: '{{ old('typ', 'teams') }}' }"
+                          x-data="{ typ: '{{ old('typ', 'teams') }}', mailZiel: '{{ old('mail_ziel', 'admins') }}' }"
                           class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end border-t pt-4">
                         @csrf
                         <div>
@@ -207,7 +205,14 @@
                             </select>
                         </div>
                         <div x-show="typ === 'mail'" x-cloak>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Mail-Empfänger</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Mail an</label>
+                            <select name="mail_ziel" x-model="mailZiel" class="w-full rounded-md border-gray-300 text-sm">
+                                <option value="admins">System-Admins</option>
+                                <option value="adresse">feste Adresse</option>
+                            </select>
+                        </div>
+                        <div x-show="typ === 'mail' && mailZiel === 'adresse'" x-cloak>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Adresse</label>
                             <input name="mail_empfaenger" type="email" value="{{ old('mail_empfaenger') }}"
                                    class="w-full rounded-md border-gray-300 text-sm" placeholder="name@firma.de">
                         </div>

@@ -114,19 +114,27 @@ class NotificationController extends Controller
 
     public function routeStore(Request $request): RedirectResponse
     {
+        $anAdmins = $request->input('typ') === 'mail' && $request->input('mail_ziel') === 'admins';
+
         $daten = $request->validate([
             'meldungsart' => ['required', 'string', Rule::in(array_keys($this->registry->meldungsarten()))],
             'typ' => ['required', Rule::in(['mail', 'teams'])],
             'teams_channel_id' => ['nullable', 'exists:ekkon_teams_channels,id', 'required_if:typ,teams'],
-            'mail_empfaenger' => ['nullable', 'email', 'required_if:typ,mail'],
+            // Feste Adresse nur nötig, wenn NICHT an die Admins geht.
+            'mail_empfaenger' => ['nullable', 'email', Rule::requiredIf(fn () => $request->input('typ') === 'mail' && ! $anAdmins)],
         ]);
 
-        // Sauber halten: Beim Wechsel des Typs soll kein verwaistes Feld
+        // Sauber halten: Beim Wechsel des Typs/Ziels soll kein verwaistes Feld
         // stehenbleiben, sonst rätselt man später über tote Werte.
         if ($daten['typ'] === 'teams') {
             $daten['mail_empfaenger'] = null;
+            $daten['mail_an_admins'] = false;
         } else {
             $daten['teams_channel_id'] = null;
+            $daten['mail_an_admins'] = $anAdmins;
+            if ($anAdmins) {
+                $daten['mail_empfaenger'] = null;
+            }
         }
 
         NotificationRoute::create($daten + ['aktiv' => true]);
