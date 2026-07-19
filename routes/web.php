@@ -16,6 +16,7 @@ Route::middleware(['web', 'auth'])
             Route::get('/task/{group}/{name}', [TaskController::class, 'show'])->name('task.show');
             Route::post('/task/{group}/{name}/run', [TaskController::class, 'run'])->name('task.run');
             Route::post('/task/{group}/{name}/toggle', [TaskController::class, 'toggle'])->name('task.toggle');
+            Route::post('/task/{group}/{name}/einstellungen', [TaskController::class, 'einstellungen'])->name('task.einstellungen');
 
             // Benachrichtigungen: Channels sind Passwort-Träger (Webhook-URL),
             // und wer routet, entscheidet, wer Betriebsmeldungen sieht –

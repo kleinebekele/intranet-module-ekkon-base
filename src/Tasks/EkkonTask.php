@@ -5,6 +5,7 @@ namespace Intranet\Modules\Ekkon\Tasks;
 use Cron\CronExpression;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
+use Intranet\Modules\Ekkon\Models\TaskSetting;
 use Intranet\Modules\Ekkon\Services\Benachrichtiger;
 
 /**
@@ -49,6 +50,37 @@ abstract class EkkonTask
      * @var array<string, string>
      */
     public array $meldungsarten = [];
+
+    /**
+     * Einstellungen, die dieser Task im Backend anbietet.
+     *
+     *   public array $einstellungen = [
+     *       'probelauf' => [
+     *           'typ' => 'ja_nein',           // ja_nein | text | zahl | auswahl
+     *           'label' => 'Probelauf',
+     *           'standard' => true,
+     *           'hilfe' => 'Liest und berichtet, schreibt aber nichts.',
+     *       ],
+     *       'grenze' => ['typ' => 'zahl', 'label' => 'Höchstzahl', 'standard' => 100],
+     *       'modus' => ['typ' => 'auswahl', 'label' => 'Modus', 'standard' => 'sanft',
+     *                   'optionen' => ['sanft' => 'Sanft', 'hart' => 'Hart']],
+     *   ];
+     *
+     * Aus dieser Deklaration baut die Task-Detailseite selbstständig eine Maske.
+     * Ein Task muss dafür nichts weiter tun – kein Formular, kein Controller,
+     * keine `.env`-Variable. Gelesen wird mit $this->einstellung('probelauf').
+     *
+     * Warum überhaupt: Die `.env` beschreibt, WO eine Instanz läuft. Was jemand
+     * fachlich entscheidet, gehört ins Backend – dort sieht man es, kann es
+     * ändern, ohne auf einen Server zu müssen, und es wirkt sofort statt erst
+     * nach `config:clear`.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    public array $einstellungen = [];
+
+    /** @var array<string, string|null>|null Zwischenspeicher für den laufenden Vorgang */
+    private ?array $gespeicherteEinstellungen = null;
 
     /**
      * Schwellwerte (Sekunden) für die Farbcodierung der Laufdauer,
@@ -102,6 +134,41 @@ abstract class EkkonTask
     public function nextRunDate(): DateTimeInterface
     {
         return (new CronExpression($this->schedule()))->getNextRunDate(now());
+    }
+
+    // ── Einstellungen ───────────────────────────────────────────────────
+
+    /**
+     * Den im Backend eingestellten Wert lesen – oder den Standard aus der
+     * Deklaration, solange niemand etwas geändert hat.
+     *
+     * Der Typ kommt aus der Deklaration, nicht aus dem gespeicherten Text:
+     * `ja_nein` liefert bool, `zahl` liefert int, alles andere string.
+     */
+    protected function einstellung(string $schluessel): mixed
+    {
+        $deklaration = $this->einstellungen[$schluessel] ?? null;
+
+        if ($deklaration === null) {
+            throw new \InvalidArgumentException(
+                "Einstellung „{$schluessel}\" ist in ".static::class.' nicht deklariert.'
+            );
+        }
+
+        $this->gespeicherteEinstellungen ??= TaskSetting::fuer($this->key());
+
+        if (! array_key_exists($schluessel, $this->gespeicherteEinstellungen)) {
+            return $deklaration['standard'] ?? null;
+        }
+
+        $wert = $this->gespeicherteEinstellungen[$schluessel];
+
+        return match ($deklaration['typ'] ?? 'text') {
+            // "0"/"" gelten als Nein – so kommt ein Häkchen aus dem Formular an.
+            'ja_nein' => (bool) $wert && $wert !== '0',
+            'zahl' => (int) $wert,
+            default => (string) $wert,
+        };
     }
 
     // ── Nachrichten & Debug ─────────────────────────────────────────────

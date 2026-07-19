@@ -58,6 +58,73 @@
                 </div>
             </div>
 
+            @if ($task->einstellungen)
+                {{-- Aus der Deklaration des Tasks gebaut: Ein Task, der etwas
+                     einzustellen hat, bekommt diese Maske geschenkt. --}}
+                <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+                    <h3 class="font-semibold text-gray-700 mb-1">Einstellungen</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        Gilt nur für diesen Task und wirkt sofort — auch für die geplanten Läufe.
+                    </p>
+
+                    <form method="POST" action="{{ route('module.ekkon.task.einstellungen', explode('/', $task->key(), 2)) }}"
+                          class="space-y-4">
+                        @csrf
+
+                        @foreach ($task->einstellungen as $schluessel => $feld)
+                            {{-- Bewusst die Langform: Die Kurzform mit runden Klammern
+                                 findet bei verschachtelten Klammern das Ende des
+                                 Ausdrucks nicht und lässt den Rest der Datei als rohen
+                                 Text stehen. (Auch hier nicht ausschreiben – Blade wertet
+                                 Direktiven sogar innerhalb von Kommentaren aus.) --}}
+                            @php
+                                $wert = $einstellungen[$schluessel] ?? ($feld['standard'] ?? null);
+                            @endphp
+
+                            <div>
+                                @if (($feld['typ'] ?? 'text') === 'ja_nein')
+                                    <label class="inline-flex items-start gap-2 text-sm text-gray-700">
+                                        <input type="checkbox" name="einstellungen[{{ $schluessel }}]" value="1"
+                                               @checked($wert)
+                                               class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span>
+                                            <span class="font-medium">{{ $feld['label'] ?? $schluessel }}</span>
+                                            @if (! empty($feld['hilfe']))
+                                                <span class="block text-gray-500">{{ $feld['hilfe'] }}</span>
+                                            @endif
+                                        </span>
+                                    </label>
+                                @elseif (($feld['typ'] ?? 'text') === 'auswahl')
+                                    <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
+                                    <select name="einstellungen[{{ $schluessel }}]"
+                                            class="mt-1 block w-64 rounded-lg border-gray-300 text-sm">
+                                        @foreach (($feld['optionen'] ?? []) as $optWert => $optLabel)
+                                            <option value="{{ $optWert }}" @selected((string) $wert === (string) $optWert)>{{ $optLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                    @if (! empty($feld['hilfe']))
+                                        <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
+                                    @endif
+                                @else
+                                    <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
+                                    <input type="{{ ($feld['typ'] ?? 'text') === 'zahl' ? 'number' : 'text' }}"
+                                           name="einstellungen[{{ $schluessel }}]" value="{{ $wert }}"
+                                           class="mt-1 block w-64 rounded-lg border-gray-300 text-sm">
+                                    @if (! empty($feld['hilfe']))
+                                        <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
+                                    @endif
+                                @endif
+                            </div>
+                        @endforeach
+
+                        <button type="submit"
+                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                            Einstellungen speichern
+                        </button>
+                    </form>
+                </div>
+            @endif
+
             @if ($highlightRun)
                 <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6 border-l-4
                             {{ $highlightRun->status === 'ok' ? 'border-emerald-500' : 'border-red-500' }}">
