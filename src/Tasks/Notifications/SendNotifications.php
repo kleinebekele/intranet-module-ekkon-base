@@ -140,7 +140,7 @@ class SendNotifications extends EkkonTask
                     'ekkon:'.$n->meldungsart,
                     (string) $n->ziel,
                     [
-                        'titel' => (string) $n->titel,
+                        'ueberschrift' => (string) $n->titel,
                         'text' => (string) $n->text,
                         'quelle' => (string) ($n->quelle ?: '—'),
                     ],

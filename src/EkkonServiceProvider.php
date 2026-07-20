@@ -116,11 +116,13 @@ class EkkonServiceProvider extends ModuleServiceProvider
                         .'wenn dafür eine Mail-Route existiert. Der Text kommt vom auslösenden Task '
                         .'(Platzhalter {{ text }}).',
                     platzhalter: [
-                        'titel' => 'Überschrift/Betreff der Meldung',
+                        // Bewusst NICHT „titel": das ist im Rahmen der Haupttitel
+                        // der Instanz – die Namen würden kollidieren.
+                        'ueberschrift' => 'Überschrift/Betreff der Meldung',
                         'text' => 'Der Meldungstext vom Task (kann einen Link enthalten)',
                         'quelle' => 'Auslösender Task',
                     ],
-                    betreff: '{{ titel }}',
+                    betreff: '{{ ueberschrift }}',
                     html: self::MELDUNG_HTML,
                     text: self::MELDUNG_TEXT,
                 ));
@@ -129,13 +131,13 @@ class EkkonServiceProvider extends ModuleServiceProvider
     }
 
     private const MELDUNG_HTML = <<<'HTML'
-<p style="margin:0 0 16px;font-size:16px;font-weight:bold;">{{ titel }}</p>
+<p style="margin:0 0 16px;font-size:16px;font-weight:bold;">{{ ueberschrift }}</p>
 <div style="margin:0 0 16px;white-space:pre-line;color:#374151;">{{ text }}</div>
 <p style="margin:0;color:#9ca3af;font-size:12px;">Ausgelöst von: {{ quelle }}</p>
 HTML;
 
     private const MELDUNG_TEXT = <<<'TEXT'
-{{ titel }}
+{{ ueberschrift }}
 
 {{ text }}
 
