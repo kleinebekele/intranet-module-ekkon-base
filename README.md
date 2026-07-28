@@ -5,6 +5,10 @@ Dauer und Ergebnis, „jetzt ausführen" auf Knopfdruck, Pause-Schalter je Aufga
 Benachrichtigungen bei Auffälligkeiten – und eine fertige MSSQL-Anbindung für
 Aufgaben, die aus einem SQL Server lesen.
 
+Pausierte Aufgaben stehen in der Übersicht **am Ende ihrer Kategorie** und sind
+**bernsteinfarben** abgesetzt – sie laufen nicht, und das soll man sehen, statt es
+aus einem fehlenden „nächster Lauf" zu erschließen.
+
 > **Voraussetzung:** Dieses Paket ist ein Modul der Intranet-Plattform
 > (`intranet-core`) und erbt von deren `App\Modules\Support\ModuleServiceProvider`.
 > In einem beliebigen Laravel-Projekt läuft es nicht.

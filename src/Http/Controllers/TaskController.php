@@ -5,6 +5,7 @@ namespace Intranet\Modules\Ekkon\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Intranet\Modules\Ekkon\Models\TaskRun;
@@ -45,15 +46,54 @@ class TaskController extends Controller
             ->get()
             ->keyBy('task_key');
 
+        $states = TaskState::query()->get()->keyBy('task_key');
+
         return view('ekkon::tasks.index', [
-            'categories' => $this->registry->byCategory(),
+            'categories' => $this->pausierteAnsEnde($this->registry->byCategory(), $states),
             'stats' => $stats,
             'lastRuns' => $lastRuns,
-            'states' => TaskState::query()->get()->keyBy('task_key'),
+            'states' => $states,
             // Doppelt vergebene Task-Keys: die verworfenen Tasks laufen NICHT.
             // Das muss man sehen – sonst fehlt lautlos ein Task.
             'kollisionen' => $this->registry->kollisionen(),
         ]);
+    }
+
+    /**
+     * Pausierte Tasks innerhalb ihrer Kategorie ans Ende stellen.
+     *
+     * Ein pausierter Task läuft nicht – zwischen den aktiven stehend sieht er
+     * aber aus wie einer, der gerade nur nichts zu tun hatte. Unten gesammelt
+     * (und farblich abgesetzt, s. View) ist auf einen Blick klar, was arbeitet
+     * und was ruht.
+     *
+     * Innerhalb beider Blöcke bleibt die alphabetische Reihenfolge der Registry
+     * erhalten.
+     *
+     * @param  array<string, array<string, \Intranet\Modules\Ekkon\Tasks\EkkonTask>>  $categories
+     * @param  Collection<string, TaskState>  $states
+     * @return array<string, array<string, \Intranet\Modules\Ekkon\Tasks\EkkonTask>>
+     */
+    private function pausierteAnsEnde(array $categories, Collection $states): array
+    {
+        foreach ($categories as $category => $tasks) {
+            $aktiv = [];
+            $pausiert = [];
+
+            foreach ($tasks as $key => $task) {
+                $state = $states->get($key);
+
+                if ($state && ! $state->enabled) {
+                    $pausiert[$key] = $task;
+                } else {
+                    $aktiv[$key] = $task;
+                }
+            }
+
+            $categories[$category] = $aktiv + $pausiert;
+        }
+
+        return $categories;
     }
 
     /** Detail: Beschreibung, Zeitplan, Lauf-Historie. */

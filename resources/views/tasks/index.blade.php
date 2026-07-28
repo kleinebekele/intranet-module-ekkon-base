@@ -49,8 +49,14 @@
                                 $paused = $state && ! $state->enabled;
                             @endphp
 
+                            {{-- Pausiert schlägt Fehler: Ein ruhender Task läuft nicht,
+                                 der alte Fehler ist damit Vergangenheit. Die rote Karte
+                                 gehört dem, der WIRKLICH gerade scheitert. Das Fehler-
+                                 Abzeichen bleibt trotzdem stehen. --}}
                             <div class="border rounded-lg p-4 flex flex-col gap-2
-                                        {{ $failed ? 'border-red-400 bg-red-50' : 'border-gray-200' }}">
+                                        @if ($paused) border-amber-400 bg-amber-50
+                                        @elseif ($failed) border-red-400 bg-red-50
+                                        @else border-gray-200 @endif">
                                 <div class="flex items-start justify-between gap-2">
                                     <a href="{{ route('module.ekkon.task.show', [$group, $name]) }}"
                                        class="font-medium text-indigo-700 hover:underline break-all"
@@ -61,7 +67,7 @@
                                         <span class="shrink-0 text-xs font-semibold text-red-700 bg-red-100 rounded px-2 py-0.5">Fehler</span>
                                     @endif
                                     @if ($paused)
-                                        <span class="shrink-0 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-300 rounded px-2 py-0.5">pausiert</span>
+                                        <span class="shrink-0 text-xs font-semibold text-amber-900 bg-amber-200 border border-amber-400 rounded px-2 py-0.5">pausiert</span>
                                     @endif
                                 </div>
 
