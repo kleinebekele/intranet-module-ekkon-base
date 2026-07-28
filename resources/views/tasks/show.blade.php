@@ -10,6 +10,9 @@
 
     @php
         $paused = $state && ! $state->enabled;
+        // Nur wer etwas einzustellen hat, bekommt die zweite Spalte. Sonst
+        // stünde neben den Stammdaten ein leerer Platz.
+        $hatEinstellungen = (bool) $task->einstellungen;
     @endphp
 
     <div class="py-6">
@@ -29,123 +32,145 @@
                 </div>
             @endif
 
-            <div class="shadow-sm sm:rounded-lg p-4 sm:p-6
-                        {{ $paused ? 'border border-amber-400 bg-amber-50' : 'bg-white' }}">
-                <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                    <div>
-                        <dt class="text-gray-500">Beschreibung</dt>
-                        <dd class="font-medium text-gray-800">{{ $task->description ?: '–' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-gray-500">Zeitplan</dt>
-                        <dd class="font-medium text-gray-800">
-                            <span class="font-mono">{{ $task->schedule() }}</span>
-                            @if ($state?->next_run_at)
-                                <span class="block text-xs text-gray-500 mt-0.5">steuert sich selbst (setInterval)</span>
-                            @endif
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-gray-500">Nächster Lauf</dt>
-                        <dd class="font-medium text-gray-800">
-                            @if ($paused)
-                                <span class="text-xs font-semibold text-amber-900 bg-amber-200 border border-amber-400 rounded px-2 py-0.5">pausiert</span>
-                            @elseif ($state?->next_run_at?->isFuture())
-                                {{ $state->next_run_at->format('d.m.Y H:i') }}
-                            @else
-                                {{ \Illuminate\Support\Carbon::instance($task->nextRunDate())->format('d.m.Y H:i') }}
-                            @endif
-                        </dd>
-                    </div>
-                </dl>
+            {{-- Ab xl stehen Stammdaten und Einstellungen nebeneinander: Wer an
+                 den Einstellungen dreht, will Beschreibung und Zeitplan dabei
+                 im Blick behalten. items-start, damit die kürzere Karte nicht
+                 auf die Höhe der längeren gezogen wird.
 
-                <div class="mt-4 flex gap-2">
-                    <form method="POST" action="{{ route('module.ekkon.task.run', explode('/', $task->key(), 2)) }}">
-                        @csrf
-                        <button type="submit"
-                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white font-semibold hover:bg-indigo-500">
-                            jetzt ausführen
-                        </button>
-                    </form>
-                    <form method="POST" action="{{ route('module.ekkon.task.toggle', explode('/', $task->key(), 2)) }}">
-                        @csrf
-                        <button type="submit"
-                                class="rounded-md border px-4 py-2 text-sm font-semibold
-                                       {{ $paused
-                                           ? 'border-amber-500 bg-amber-200 text-amber-900 hover:bg-amber-300'
-                                           : 'border-gray-300 bg-white text-gray-700' }}">
-                            {{ $paused ? '▶ geplante Läufe aktivieren' : '⏸ geplante Läufe pausieren' }}
-                        </button>
-                    </form>
-                </div>
-            </div>
+                 Erst xl, nicht lg: Die Sidebar lässt bei 1024 px nur ~625 px
+                 Inhalt übrig, ein Drittel davon wären 192 px – unlesbar schmal. --}}
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
 
-            @if ($task->einstellungen)
-                {{-- Aus der Deklaration des Tasks gebaut: Ein Task, der etwas
-                     einzustellen hat, bekommt diese Maske geschenkt. --}}
-                <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
-                    <h3 class="font-semibold text-gray-700 mb-1">Einstellungen</h3>
-                    <p class="text-sm text-gray-500 mb-4">
-                        Gilt nur für diesen Task und wirkt sofort — auch für die geplanten Läufe.
-                    </p>
-
-                    <form method="POST" action="{{ route('module.ekkon.task.einstellungen', explode('/', $task->key(), 2)) }}"
-                          class="space-y-4">
-                        @csrf
-
-                        @foreach ($task->einstellungen as $schluessel => $feld)
-                            {{-- Bewusst die Langform: Die Kurzform mit runden Klammern
-                                 findet bei verschachtelten Klammern das Ende des
-                                 Ausdrucks nicht und lässt den Rest der Datei als rohen
-                                 Text stehen. (Auch hier nicht ausschreiben – Blade wertet
-                                 Direktiven sogar innerhalb von Kommentaren aus.) --}}
-                            @php
-                                $wert = $einstellungen[$schluessel] ?? ($feld['standard'] ?? null);
-                            @endphp
-
-                            <div>
-                                @if (($feld['typ'] ?? 'text') === 'ja_nein')
-                                    <label class="inline-flex items-start gap-2 text-sm text-gray-700">
-                                        <input type="checkbox" name="einstellungen[{{ $schluessel }}]" value="1"
-                                               @checked($wert)
-                                               class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span>
-                                            <span class="font-medium">{{ $feld['label'] ?? $schluessel }}</span>
-                                            @if (! empty($feld['hilfe']))
-                                                <span class="block text-gray-500">{{ $feld['hilfe'] }}</span>
-                                            @endif
-                                        </span>
-                                    </label>
-                                @elseif (($feld['typ'] ?? 'text') === 'auswahl')
-                                    <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
-                                    <select name="einstellungen[{{ $schluessel }}]"
-                                            class="mt-1 block w-64 rounded-lg border-gray-300 text-sm">
-                                        @foreach (($feld['optionen'] ?? []) as $optWert => $optLabel)
-                                            <option value="{{ $optWert }}" @selected((string) $wert === (string) $optWert)>{{ $optLabel }}</option>
-                                        @endforeach
-                                    </select>
-                                    @if (! empty($feld['hilfe']))
-                                        <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
-                                    @endif
-                                @else
-                                    <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
-                                    <input type="{{ ($feld['typ'] ?? 'text') === 'zahl' ? 'number' : 'text' }}"
-                                           name="einstellungen[{{ $schluessel }}]" value="{{ $wert }}"
-                                           class="mt-1 block w-64 rounded-lg border-gray-300 text-sm">
-                                    @if (! empty($feld['hilfe']))
-                                        <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
-                                    @endif
+                <div class="shadow-sm sm:rounded-lg p-4 sm:p-6
+                            {{ $hatEinstellungen ? 'xl:col-span-1' : 'xl:col-span-3' }}
+                            {{ $paused ? 'border border-amber-400 bg-amber-50' : 'bg-white' }}">
+                    {{-- Nebeneinander ist die Karte nur ein Drittel breit – dann
+                         untereinander statt in drei Spalten. --}}
+                    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm
+                               {{ $hatEinstellungen ? 'xl:grid-cols-1' : '' }}">
+                        <div>
+                            <dt class="text-gray-500">Beschreibung</dt>
+                            <dd class="font-medium text-gray-800">{{ $task->description ?: '–' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-500">Zeitplan</dt>
+                            <dd class="font-medium text-gray-800">
+                                <span class="font-mono">{{ $task->schedule() }}</span>
+                                @if ($state?->next_run_at)
+                                    <span class="block text-xs text-gray-500 mt-0.5">steuert sich selbst (setInterval)</span>
                                 @endif
-                            </div>
-                        @endforeach
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-500">Nächster Lauf</dt>
+                            <dd class="font-medium text-gray-800">
+                                @if ($paused)
+                                    <span class="text-xs font-semibold text-amber-900 bg-amber-200 border border-amber-400 rounded px-2 py-0.5">pausiert</span>
+                                @elseif ($state?->next_run_at?->isFuture())
+                                    {{ $state->next_run_at->format('d.m.Y H:i') }}
+                                @else
+                                    {{ \Illuminate\Support\Carbon::instance($task->nextRunDate())->format('d.m.Y H:i') }}
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
 
-                        <button type="submit"
-                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                            Einstellungen speichern
-                        </button>
-                    </form>
+                    {{-- flex-wrap: In der schmalen Spalte passen die beiden
+                         Knöpfe nicht immer nebeneinander. --}}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('module.ekkon.task.run', explode('/', $task->key(), 2)) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white font-semibold hover:bg-indigo-500">
+                                jetzt ausführen
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ route('module.ekkon.task.toggle', explode('/', $task->key(), 2)) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="rounded-md border px-4 py-2 text-sm font-semibold
+                                           {{ $paused
+                                               ? 'border-amber-500 bg-amber-200 text-amber-900 hover:bg-amber-300'
+                                               : 'border-gray-300 bg-white text-gray-700' }}">
+                                {{ $paused ? '▶ geplante Läufe aktivieren' : '⏸ geplante Läufe pausieren' }}
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            @endif
+
+                @if ($hatEinstellungen)
+                    {{-- Aus der Deklaration des Tasks gebaut: Ein Task, der etwas
+                         einzustellen hat, bekommt diese Maske geschenkt. --}}
+                    <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6 xl:col-span-2">
+                        <h3 class="font-semibold text-gray-700 mb-1">Einstellungen</h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Gilt nur für diesen Task und wirkt sofort — auch für die geplanten Läufe.
+                        </p>
+
+                        {{-- Zweispaltig erst ab 2xl: Bei 1280 px ist diese Karte
+                             nur ~580 px breit, zwei Spalten wären dort 258 px
+                             schmal und die Hilfetexte zerfaserten. --}}
+                        <form method="POST" action="{{ route('module.ekkon.task.einstellungen', explode('/', $task->key(), 2)) }}"
+                              class="space-y-4">
+                            @csrf
+
+                            <div class="grid grid-cols-1 2xl:grid-cols-2 gap-4">
+                                @foreach ($task->einstellungen as $schluessel => $feld)
+                                    {{-- Bewusst die Langform: Die Kurzform mit runden Klammern
+                                         findet bei verschachtelten Klammern das Ende des
+                                         Ausdrucks nicht und lässt den Rest der Datei als rohen
+                                         Text stehen. (Auch hier nicht ausschreiben – Blade wertet
+                                         Direktiven sogar innerhalb von Kommentaren aus.) --}}
+                                    @php
+                                        $wert = $einstellungen[$schluessel] ?? ($feld['standard'] ?? null);
+                                    @endphp
+
+                                    <div>
+                                        @if (($feld['typ'] ?? 'text') === 'ja_nein')
+                                            <label class="inline-flex items-start gap-2 text-sm text-gray-700">
+                                                <input type="checkbox" name="einstellungen[{{ $schluessel }}]" value="1"
+                                                       @checked($wert)
+                                                       class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                <span>
+                                                    <span class="font-medium">{{ $feld['label'] ?? $schluessel }}</span>
+                                                    @if (! empty($feld['hilfe']))
+                                                        <span class="block text-gray-500">{{ $feld['hilfe'] }}</span>
+                                                    @endif
+                                                </span>
+                                            </label>
+                                        @elseif (($feld['typ'] ?? 'text') === 'auswahl')
+                                            <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
+                                            <select name="einstellungen[{{ $schluessel }}]"
+                                                    class="mt-1 block w-64 max-w-full rounded-lg border-gray-300 text-sm">
+                                                @foreach (($feld['optionen'] ?? []) as $optWert => $optLabel)
+                                                    <option value="{{ $optWert }}" @selected((string) $wert === (string) $optWert)>{{ $optLabel }}</option>
+                                                @endforeach
+                                            </select>
+                                            @if (! empty($feld['hilfe']))
+                                                <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
+                                            @endif
+                                        @else
+                                            <label class="block text-sm font-medium text-gray-700">{{ $feld['label'] ?? $schluessel }}</label>
+                                            <input type="{{ ($feld['typ'] ?? 'text') === 'zahl' ? 'number' : 'text' }}"
+                                                   name="einstellungen[{{ $schluessel }}]" value="{{ $wert }}"
+                                                   class="mt-1 block w-64 max-w-full rounded-lg border-gray-300 text-sm">
+                                            @if (! empty($feld['hilfe']))
+                                                <p class="mt-1 text-sm text-gray-500">{{ $feld['hilfe'] }}</p>
+                                            @endif
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <button type="submit"
+                                    class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                                Einstellungen speichern
+                            </button>
+                        </form>
+                    </div>
+                @endif
+
+            </div>
 
             @if ($highlightRun)
                 <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6 border-l-4
