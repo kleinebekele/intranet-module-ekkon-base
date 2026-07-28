@@ -8,10 +8,29 @@
         </div>
     </x-slot>
 
+    @php
+        $paused = $state && ! $state->enabled;
+    @endphp
+
     <div class="py-6">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 sm:p-6">
+            @if ($paused)
+                {{-- Muss ins Auge springen: Wer hier landet, will meist wissen,
+                     warum nichts passiert. Und der Unterschied ist wichtig –
+                     pausiert sind nur die GEPLANTEN Läufe, von Hand startet der
+                     Task weiterhin. --}}
+                <div class="rounded-lg border border-amber-400 bg-amber-100 text-amber-900 px-4 py-3">
+                    <p class="font-semibold">⏸ Diese Aufgabe ist pausiert.</p>
+                    <p class="text-sm mt-1">
+                        Der Zeitplan wird nicht ausgeführt – die Aufgabe läuft von allein gar nicht.
+                        „Jetzt ausführen" startet sie trotzdem jederzeit von Hand.
+                    </p>
+                </div>
+            @endif
+
+            <div class="shadow-sm sm:rounded-lg p-4 sm:p-6
+                        {{ $paused ? 'border border-amber-400 bg-amber-50' : 'bg-white' }}">
                 <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                         <dt class="text-gray-500">Beschreibung</dt>
@@ -29,8 +48,8 @@
                     <div>
                         <dt class="text-gray-500">Nächster Lauf</dt>
                         <dd class="font-medium text-gray-800">
-                            @if ($state && ! $state->enabled)
-                                <span class="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-300 rounded px-2 py-0.5">pausiert</span>
+                            @if ($paused)
+                                <span class="text-xs font-semibold text-amber-900 bg-amber-200 border border-amber-400 rounded px-2 py-0.5">pausiert</span>
                             @elseif ($state?->next_run_at?->isFuture())
                                 {{ $state->next_run_at->format('d.m.Y H:i') }}
                             @else
@@ -51,8 +70,11 @@
                     <form method="POST" action="{{ route('module.ekkon.task.toggle', explode('/', $task->key(), 2)) }}">
                         @csrf
                         <button type="submit"
-                                class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700">
-                            {{ $state && ! $state->enabled ? '▶ geplante Läufe aktivieren' : '⏸ geplante Läufe pausieren' }}
+                                class="rounded-md border px-4 py-2 text-sm font-semibold
+                                       {{ $paused
+                                           ? 'border-amber-500 bg-amber-200 text-amber-900 hover:bg-amber-300'
+                                           : 'border-gray-300 bg-white text-gray-700' }}">
+                            {{ $paused ? '▶ geplante Läufe aktivieren' : '⏸ geplante Läufe pausieren' }}
                         </button>
                     </form>
                 </div>

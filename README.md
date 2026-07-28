@@ -7,7 +7,9 @@ Aufgaben, die aus einem SQL Server lesen.
 
 Pausierte Aufgaben stehen in der Übersicht **am Ende ihrer Kategorie** und sind
 **bernsteinfarben** abgesetzt – sie laufen nicht, und das soll man sehen, statt es
-aus einem fehlenden „nächster Lauf" zu erschließen.
+aus einem fehlenden „nächster Lauf" zu erschließen. Auf der Detailseite sagt es
+ein Hinweisbalken samt der wichtigen Einschränkung: Pausiert ist nur der
+Zeitplan, „jetzt ausführen" startet die Aufgabe weiterhin.
 
 > **Voraussetzung:** Dieses Paket ist ein Modul der Intranet-Plattform
 > (`intranet-core`) und erbt von deren `App\Modules\Support\ModuleServiceProvider`.
