@@ -114,8 +114,29 @@ abstract class EkkonTask
     abstract public function run(): array;
 
     /**
+     * Ab dieser Laufzeit (Sekunden) meldet sich der Runner – 0 schaltet die
+     * Warnung ab.
+     *
+     * ⚠️ NICHT MIT lockSeconds() VERWECHSELN. Die Sperre verhindert, dass sich
+     * Läufe überlappen; sie muss LÄNGER sein als der längste Lauf. Diese Grenze
+     * sagt umgekehrt, ab wann ein Lauf überhaupt verdächtig ist. Ein Task darf
+     * also lange laufen dürfen (hohe Sperre) und trotzdem früh auffallen
+     * (niedrige Warnung) – genau diese Kombination ist gewollt.
+     *
+     * Emanuel 2026-08-05: "wie können wir verhindern, dass Aufgaben im Ekkon
+     * länger als sagen wir mal 10 Minuten laufen?" – daher 600 Sekunden als
+     * Vorgabe für alle Tasks.
+     */
+    public int $warnungAbSekunden = 600;
+
+    /**
      * Überlappungsschutz: solange (Sekunden) hält der Lauf die Sperre,
      * ein zweiter Start desselben Tasks wird währenddessen übersprungen.
+     *
+     * ⚠️ MUSS LÄNGER SEIN ALS DER LÄNGSTE LAUF. Verfällt die Sperre mitten im
+     * Lauf, startet der Zeitplan den nächsten – am 2026-08-05 liefen so sechs
+     * Läufe gleichzeitig auf derselben Datenbank und legten sie lahm. Tasks mit
+     * längeren Läufen überschreiben diesen Wert (siehe Aftersales/JourneyUpdate).
      */
     public function lockSeconds(): int
     {

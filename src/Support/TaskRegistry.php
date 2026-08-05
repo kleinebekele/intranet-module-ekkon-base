@@ -131,6 +131,16 @@ class TaskRegistry
     }
 
     /**
+     * Meldungsart des Runners: Ein Lauf hat ungewoehnlich lange gedauert.
+     *
+     * Nach dem Vorfall am 2026-08-05: Der Task lief stundenlang, und gemerkt
+     * hat es niemand am System, sondern daran, dass die Wawi lahm wurde. Eine
+     * Ueberwachung, die nur eine Tabellenzelle einfaerbt, sieht man erst, wenn
+     * man ohnehin schon nachschaut.
+     */
+    public const MELDUNG_LAUFZEIT = 'task-laufzeit';
+
+    /**
      * Alle Meldungsarten, die irgendein Task deklariert (EkkonTask::$meldungsarten):
      * schluessel => "Klartext (Task/Key)".
      *
@@ -143,7 +153,12 @@ class TaskRegistry
      */
     public function meldungsarten(): array
     {
-        $arten = [];
+        // Meldungsarten des Systems selbst - sie gehoeren keinem Task, sondern
+        // gelten fuer alle. Muessen hier stehen, sonst liesse sich dafuer keine
+        // Route anlegen und die Meldung landete immer bei 'ohne_ziel'.
+        $arten = [
+            self::MELDUNG_LAUFZEIT => 'Ein Task lief ungewöhnlich lange (System)',
+        ];
 
         foreach ($this->all() as $key => $task) {
             foreach ($task->meldungsarten as $art => $klartext) {

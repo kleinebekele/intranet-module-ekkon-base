@@ -6,6 +6,7 @@ use App\Modules\Support\ModuleManifest;
 use App\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Intranet\Modules\Ekkon\Console\RunTaskCommand;
+use Intranet\Modules\Ekkon\Console\TimeoutTestCommand;
 use Intranet\Modules\Ekkon\Models\TaskRun;
 use Intranet\Modules\Ekkon\Support\TaskRegistry;
 
@@ -65,7 +66,7 @@ class EkkonServiceProvider extends ModuleServiceProvider
             return;
         }
 
-        $this->commands([RunTaskCommand::class]);
+        $this->commands([RunTaskCommand::class, TimeoutTestCommand::class]);
 
         // Jeden aktiven Task beim Laravel-Scheduler anmelden. Der Server braucht
         // dafür nur EINEN Cron-Eintrag: * * * * * php artisan schedule:run

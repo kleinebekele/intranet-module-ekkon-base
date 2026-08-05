@@ -59,6 +59,29 @@ return [
          * beim ODBC-Weg gehört TrustServerCertificate in den DSN.
          */
         'trust_server_certificate' => env('MSSQL_TRUST_CERT', false),
+
+        /*
+         * ⚠️ NOTBREMSE FÜR EINZELNE ABFRAGEN (Sekunden).
+         *
+         * Am 2026-08-05 hat EINE entgleiste Abfrage 67 Minuten gebraucht und
+         * dabei die produktive Wawi mitgenommen – der SQL-Dienst musste neu
+         * gestartet werden. Eine Abfrage, die so lange läuft, ist nie richtig;
+         * sie soll abbrechen und den Task sichtbar scheitern lassen, statt
+         * leise die Datenbank zu belegen.
+         *
+         * Bewusst 300 und nicht 60: Ein paar Auswertungen über ganze Historien
+         * dürfen langsam sein. Es geht nicht um "schnell", sondern um "endet
+         * überhaupt".
+         *
+         * ⚠️ OB DAS GREIFT, IST TREIBERABHÄNGIG und muss gemessen werden –
+         * PDO_ODBC reicht ATTR_TIMEOUT nicht auf jeder Plattform als
+         * Abfrage-Zeitlimit durch. Beweis per `php artisan ekkon:timeout-test`.
+         * Schlägt der Test fehl, ist dieser Wert wirkungslos (aber harmlos),
+         * und es bleibt die Laufzeit-Warnung aus dem TaskRunner.
+         */
+        'options' => [
+            PDO::ATTR_TIMEOUT => (int) env('MSSQL_QUERY_TIMEOUT', 300),
+        ],
     ],
 
 ];
