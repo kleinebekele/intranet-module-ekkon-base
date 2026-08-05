@@ -130,6 +130,24 @@ abstract class EkkonTask
     public int $warnungAbSekunden = 600;
 
     /**
+     * Darf der Runner diesen Task nach einem zu langen Lauf automatisch
+     * pausieren?
+     *
+     * Emanuel 2026-08-05: "Wenn ich Samstags Abend eine Mail bekommen würde,
+     * dass da was lange dauert, dann kann es nicht sein, dass der Task das
+     * komplette Wochenende irgendwas blockiert."
+     *
+     * Deshalb ist die Vorgabe true: melden UND stilllegen. Ein Task, der aus
+     * dem Ruder läuft, richtet bis Montag mehr Schaden an als er Nutzen bringt,
+     * und wieder anschalten ist ein Klick im Dashboard.
+     *
+     * ⚠️ Auf false gehören nur Tasks, die das System selbst am Laufen halten -
+     * allen voran der Versand der Benachrichtigungen. Legt der sich still,
+     * erfährt niemand mehr etwas, auch nicht über die anderen Tasks.
+     */
+    public bool $automatischPausieren = true;
+
+    /**
      * Überlappungsschutz: solange (Sekunden) hält der Lauf die Sperre,
      * ein zweiter Start desselben Tasks wird währenddessen übersprungen.
      *

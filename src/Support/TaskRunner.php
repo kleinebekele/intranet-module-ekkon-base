@@ -138,22 +138,57 @@ class TaskRunner
             return;
         }
 
+        // ── Zuerst stilllegen, dann melden ──────────────────────────────
+        //
+        // Emanuel 2026-08-05: "Wenn ich Samstags Abend eine Mail bekommen
+        // würde, dass da was lange dauert, dann kann es nicht sein, dass der
+        // Task das komplette Wochenende irgendwas blockiert."
+        //
+        // Die Reihenfolge ist Absicht: Das Stilllegen ist die Schutzmassnahme,
+        // die Meldung nur die Information darüber. Scheitert der Versand, ist
+        // der Task trotzdem gestoppt - andersherum liefe er weiter, während
+        // eine schöne Mail unterwegs ist.
+        //
+        // Bewusst UNABHÄNGIG vom Auslöser: Auch ein von Hand gestarteter Lauf,
+        // der aus dem Ruder läuft, ist ein Grund zum Anhalten - der nächste
+        // geplante würde es genauso tun.
+        $pausiert = false;
+
+        if ($task->automatischPausieren) {
+            try {
+                TaskState::updateOrCreate(
+                    ['task_key' => $task->key()],
+                    ['enabled' => false],
+                );
+                $pausiert = true;
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        $hinweis = $pausiert
+            ? "Der Task wurde deshalb PAUSIERT und läuft nicht mehr von selbst.\n"
+                ."Im Dashboard lässt er sich wieder aktivieren - bitte erst, wenn die Ursache "
+                ."klar ist.\n\n"
+            : "Der Task läuft weiter (automatisches Pausieren ist für ihn abgeschaltet).\n\n";
+
         try {
             (new Benachrichtiger())->benachrichtige(
                 TaskRegistry::MELDUNG_LAUFZEIT,
-                'Task lief ungewöhnlich lange: '.$task->key(),
+                ($pausiert ? 'Task pausiert – lief zu lange: ' : 'Task lief ungewöhnlich lange: ').$task->key(),
                 'Der Lauf hat '.round($dauerMs / 60000, 1).' Minuten gebraucht (Warnschwelle: '
                     .round($grenzeSekunden / 60, 1)." Minuten, Status: {$status}).\n\n"
-                    ."Bitte nachsehen, bevor daraus ein Dauerzustand wird: Ein Lauf, der länger "
-                    ."braucht als sein Abstand zum nächsten, staut sich auf – und wenn er die "
-                    ."Überlappungssperre überdauert, laufen mehrere Läufe gleichzeitig auf "
-                    ."derselben Datenbank.\n\n"
+                    .$hinweis
+                    ."Hintergrund: Ein Lauf, der länger braucht als sein Abstand zum nächsten, "
+                    ."staut sich auf - und wenn er die Überlappungssperre überdauert, laufen "
+                    ."mehrere Läufe gleichzeitig auf derselben Datenbank.\n\n"
                     .'Die Zeitmessung je Abschnitt steht in den Lauf-Details unter "tempo".',
                 [
                     'task' => $task->key(),
                     'dauer_ms' => $dauerMs,
                     'grenze_s' => $grenzeSekunden,
                     'status' => $status,
+                    'pausiert' => $pausiert,
                 ],
                 // Einmal je Task und Stunde: Ein 10-Minuten-Task würde sonst
                 // dieselbe Meldung sechsmal pro Stunde absetzen. Stündlich

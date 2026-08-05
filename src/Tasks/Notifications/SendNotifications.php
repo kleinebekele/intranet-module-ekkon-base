@@ -31,6 +31,19 @@ class SendNotifications extends EkkonTask
 
     public string $description = 'Versendet offene Benachrichtigungen (Teams/Mail) und räumt Zugestelltes nach 14 Tagen weg.';
 
+    /**
+     * ⚠️ DIESER TASK PAUSIERT SICH NIE SELBST.
+     *
+     * Er ist der Weg, auf dem Warnungen überhaupt herauskommen - auch die
+     * Warnung "ein Task lief zu lange". Würde er sich nach einem langen Lauf
+     * stilllegen, bliebe genau die Meldung liegen, die darüber informiert:
+     * Das System wäre still und würde sein Stillsein nicht melden können.
+     *
+     * Ist er selbst zu langsam, muss das über die Laufzeit-Warnung anderer
+     * Tasks oder das Dashboard auffallen.
+     */
+    public bool $automatischPausieren = false;
+
     /** Pro Lauf, damit ein Rückstau die Minute nicht sprengt. */
     private const PRO_LAUF = 25;
 

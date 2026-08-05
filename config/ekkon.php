@@ -73,11 +73,20 @@ return [
          * dürfen langsam sein. Es geht nicht um "schnell", sondern um "endet
          * überhaupt".
          *
-         * ⚠️ OB DAS GREIFT, IST TREIBERABHÄNGIG und muss gemessen werden –
-         * PDO_ODBC reicht ATTR_TIMEOUT nicht auf jeder Plattform als
-         * Abfrage-Zeitlimit durch. Beweis per `php artisan ekkon:timeout-test`.
-         * Schlägt der Test fehl, ist dieser Wert wirkungslos (aber harmlos),
-         * und es bleibt die Laufzeit-Warnung aus dem TaskRunner.
+         * ⚠️⚠️ AUF RAVENSBERGER GEMESSEN WIRKUNGSLOS (2026-08-05).
+         *
+         * `php artisan ekkon:timeout-test` dort: "DAS ZEITLIMIT GREIFT NICHT.
+         * Die Abfrage lief 30.1 Sekunden durch." PDO_ODBC reicht ATTR_TIMEOUT
+         * mit dem Microsoft ODBC Driver 18 nicht als Abfrage-Zeitlimit durch.
+         *
+         * Der Wert bleibt trotzdem stehen: Er schadet nicht und greift auf
+         * Umgebungen mit nativem pdo_sqlsrv. VERLASSEN darf man sich darauf
+         * aber nicht - dafür ist er hier ausdrücklich dokumentiert. Der
+         * wirksame Schutz ist die Laufzeit-Warnung im TaskRunner, die den Task
+         * zusätzlich PAUSIERT (siehe EkkonTask::$automatischPausieren).
+         *
+         * Vor dem Vertrauen auf diesen Wert also immer erst den Test laufen
+         * lassen - er verändert nichts.
          */
         'options' => [
             PDO::ATTR_TIMEOUT => (int) env('MSSQL_QUERY_TIMEOUT', 300),
