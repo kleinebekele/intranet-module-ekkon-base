@@ -171,9 +171,13 @@ class TaskController extends Controller
                 continue;
             }
 
-            TaskSetting::updateOrCreate(
+            // Query-Builder statt Eloquent-updateOrCreate: ekkon_task_settings hat
+            // einen zusammengesetzten Schlüssel (task_key, schluessel) und keine
+            // id-Spalte. Eloquent würde beim UPDATE auf „where id = …" ausweichen
+            // und scheitern; updateOrInsert nimmt die Attribute als WHERE.
+            \Illuminate\Support\Facades\DB::table('ekkon_task_settings')->updateOrInsert(
                 ['task_key' => $task->key(), 'schluessel' => $schluessel],
-                ['wert' => $wert],
+                ['wert' => $wert, 'created_at' => now(), 'updated_at' => now()],
             );
         }
 
