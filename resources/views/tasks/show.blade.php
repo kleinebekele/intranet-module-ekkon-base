@@ -205,7 +205,28 @@
             @endif
 
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
-                <h3 class="font-semibold text-gray-700 p-4 sm:px-6">Lauf-Historie</h3>
+                <div class="flex flex-wrap items-center justify-between gap-2 p-4 sm:px-6">
+                    <h3 class="font-semibold text-gray-700">
+                        Lauf-Historie
+                        @unless ($alle)
+                            <span class="font-normal text-gray-400 text-sm">· nur Läufe mit Nachricht</span>
+                        @endunless
+                    </h3>
+
+                    {{-- Stille Läufe sind der Normalfall, nicht die Nachricht. Wer
+                         sie doch sehen will, klickt hier. --}}
+                    @if ($alle)
+                        <a href="{{ route('module.ekkon.task.show', explode('/', $task->key(), 2)) }}"
+                           class="text-sm rounded-md border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50">
+                            nur Läufe mit Nachricht
+                        </a>
+                    @elseif ($stille > 0)
+                        <a href="{{ route('module.ekkon.task.show', [...explode('/', $task->key(), 2), 'alle' => 1]) }}"
+                           class="text-sm rounded-md border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50">
+                            alle Läufe zeigen ({{ number_format($stille, 0, ',', '.') }} stille)
+                        </a>
+                    @endif
+                </div>
                 @if ($runs->hasPages())
                     <div class="px-4 sm:px-6 pb-3 border-b border-gray-100">{{ $runs->links() }}</div>
                 @endif

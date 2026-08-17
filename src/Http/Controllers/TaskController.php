@@ -109,17 +109,34 @@ class TaskController extends Controller
     }
 
     /** Detail: Beschreibung, Zeitplan, Lauf-Historie. */
-    public function show(string $group, string $name): View
+    public function show(string $group, string $name, Request $request): View
     {
         $task = $this->findOrAbort($group, $name);
+
+        // Ein Minuten-Task erzeugt in 14 Tagen 20.000 Läufe, von denen die
+        // allermeisten nichts zu sagen haben. Wer die Historie öffnet, will
+        // wissen, WAS passiert ist – deshalb standardmäßig nur Läufe mit
+        // Nachricht (und alles, was nicht glatt lief). Clientseitig ausblenden
+        // hilft nicht: dann wäre Seite 1 von 206 einfach leer.
+        $alle = $request->boolean('alle');
+
+        $runs = TaskRun::query()
+            ->where('task_key', $task->key())
+            ->when(! $alle, fn ($q) => $q->where(fn ($f) => $f
+                ->where(fn ($m) => $m->whereNotNull('messages')->where('messages', '<>', '[]'))
+                ->orWhere('status', '<>', 'ok')))
+            ->latest('id')
+            ->paginate(100)
+            ->withQueryString();
+
+        $gesamt = TaskRun::query()->where('task_key', $task->key())->count();
 
         return view('ekkon::tasks.show', [
             'task' => $task,
             'state' => TaskState::firstWhere('task_key', $task->key()),
-            'runs' => TaskRun::query()
-                ->where('task_key', $task->key())
-                ->latest('id')
-                ->paginate(100),
+            'runs' => $runs,
+            'alle' => $alle,
+            'stille' => max(0, $gesamt - $runs->total()),
             'highlightRun' => session('ekkon_run_id')
                 ? TaskRun::find(session('ekkon_run_id'))
                 : null,

@@ -101,6 +101,13 @@ class SendNotifications extends EkkonTask
             'fehlgeschlagen' => $fehlgeschlagen,
         ];
 
+        // Was tatsächlich rausgegangen ist, gehört ins Protokoll – das ist die
+        // Nachricht. Läufe ohne Arbeit bleiben stumm; die Historie zeigt dann
+        // nur noch die Minuten, in denen wirklich etwas passiert ist.
+        if ($gesendet > 0) {
+            $this->msg($gesendet.' Benachrichtigung(en) ausgeliefert.');
+        }
+
         // Meldungen ohne Route sind ein Konfigurations-Loch: Irgendein Task
         // meldet etwas, das niemanden erreicht. Sichtbar machen, nicht zählen
         // und vergessen.
