@@ -108,6 +108,14 @@ class SendNotifications extends EkkonTask
             $this->msg($gesendet.' Benachrichtigung(en) ausgeliefert.');
         }
 
+        // Aufräumen VOR der Zählung: sonst warnt der Lauf noch über Zeilen,
+        // die er im selben Atemzug selbst wegräumt.
+        $ergebnis += $this->pruneAlte();
+
+        if (($ergebnis['gepruned_altbestand'] ?? 0) > 0) {
+            $this->msg($ergebnis['gepruned_altbestand'].' Meldung(en) ohne Meldungsart entfernt (Altbestand von vor dem 20.07.2026 – bei ihnen war nicht erkennbar, welche Route fehlte).');
+        }
+
         // Meldungen ohne Route sind ein Konfigurations-Loch: Irgendein Task
         // meldet etwas, das niemanden erreicht. Sichtbar machen, nicht zählen
         // und vergessen.
@@ -130,8 +138,6 @@ class SendNotifications extends EkkonTask
                     .$this->artenKlartext($ohneZiel).'). Route in der Benachrichtigungs-Maske anlegen.');
             }
         }
-
-        $ergebnis['gepruned'] = $this->pruneAlte();
 
         return $ergebnis;
     }
@@ -265,12 +271,31 @@ class SendNotifications extends EkkonTask
             && app(\App\Mail\Vorlagen\VorlagenRegister::class)->finden('ekkon:'.$n->meldungsart) !== null;
     }
 
-    /** Zugestelltes nach 14 Tagen wegräumen – wie bei ekkon_task_runs. */
-    private function pruneAlte(): int
+    /**
+     * Zugestelltes nach 14 Tagen wegräumen – wie bei ekkon_task_runs.
+     *
+     * Dazu der Altbestand ohne Meldungsart: Diese Zeilen entstanden vor dem
+     * 20.07.2026, als die Warteschlange die Meldungsart noch nicht mitschrieb.
+     * Bei ihnen ist nicht erkennbar, WELCHE Route fehlte – als Hinweis sind sie
+     * also wertlos, und nachwachsen können sie nicht (heute wird die
+     * Meldungsart immer gesetzt). `ohne_ziel` MIT Meldungsart bleibt weiter
+     * unangetastet: Das ist der Hinweis auf ein offenes Konfigurations-Loch.
+     *
+     * @return array{gepruned: int, gepruned_altbestand: int}
+     */
+    private function pruneAlte(): array
     {
-        return Notification::query()
+        $zugestellt = Notification::query()
             ->where('status', 'sent')
             ->where('gesendet_am', '<', now()->subDays(self::PRUNE_TAGE))
             ->delete();
+
+        $altbestand = Notification::query()
+            ->where('status', 'ohne_ziel')
+            ->where(fn ($q) => $q->whereNull('meldungsart')->orWhere('meldungsart', ''))
+            ->where('created_at', '<', now()->subDays(self::PRUNE_TAGE))
+            ->delete();
+
+        return ['gepruned' => $zugestellt, 'gepruned_altbestand' => $altbestand];
     }
 }
