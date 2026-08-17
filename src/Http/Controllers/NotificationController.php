@@ -43,8 +43,20 @@ class NotificationController extends Controller
             // eine Gesamtzahl und weiß nicht, wo man anfangen soll.
             'ohneRoute' => Notification::query()
                 ->where('status', 'ohne_ziel')
+                ->whereNotNull('meldungsart')
+                ->where('meldungsart', '<>', '')
                 ->selectRaw('meldungsart, count(*) as anzahl, max(created_at) as zuletzt')
                 ->groupBy('meldungsart')
+                ->orderByDesc('anzahl')
+                ->get(),
+            // Altbestand: Zeilen von vor dem 20.07.2026 haben keine Meldungsart
+            // (die Spalte kam erst mit den Mailvorlagen dazu). Als "—" sind sie
+            // ein Rätsel – nach QUELLE gruppiert sieht man wenigstens den Task.
+            'ohneRouteAlt' => Notification::query()
+                ->where('status', 'ohne_ziel')
+                ->where(fn ($q) => $q->whereNull('meldungsart')->orWhere('meldungsart', ''))
+                ->selectRaw('quelle, count(*) as anzahl, min(created_at) as seit, max(created_at) as zuletzt')
+                ->groupBy('quelle')
                 ->orderByDesc('anzahl')
                 ->get(),
             'offene' => Notification::query()

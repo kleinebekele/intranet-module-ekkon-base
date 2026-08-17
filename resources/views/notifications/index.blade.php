@@ -268,7 +268,7 @@
                 {{-- Das Loch zuerst: WELCHE Meldungsart hat keine Route? Die Liste
                      unten zeigt nur die letzten 50 Zeilen – bei hunderten gleichen
                      Meldungen sieht man darin nicht, woran es liegt. --}}
-                @if ($ohneRoute->isNotEmpty())
+                @if ($ohneRoute->isNotEmpty() || $ohneRouteAlt->isNotEmpty())
                     <div class="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
                         <h4 class="font-semibold text-yellow-900 mb-2">Meldungsarten ohne Route</h4>
                         <table class="text-sm w-full">
@@ -290,6 +290,25 @@
                                         </td>
                                         <td class="py-1 pr-4 text-gray-600">
                                             {{ $meldungsarten[$zeile->meldungsart] ?? 'kein Task deklariert diese Meldungsart mehr' }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                                {{-- Altbestand ohne Meldungsart: als "—" unerklaerlich,
+                                     deshalb hier mit Task und Zeitraum. --}}
+                                @foreach ($ohneRouteAlt as $alt)
+                                    <tr class="border-b border-yellow-200 last:border-0 text-gray-500">
+                                        <td class="py-1 pr-4 font-mono text-xs">— (Altbestand)</td>
+                                        <td class="py-1 pr-4 font-medium">{{ $alt->anzahl }}</td>
+                                        <td class="py-1 pr-4">
+                                            {{ $alt->zuletzt ? \Illuminate\Support\Carbon::parse($alt->zuletzt)->format('d.m.Y H:i') : '–' }}
+                                        </td>
+                                        <td class="py-1 pr-4">
+                                            aus <b>{{ $alt->quelle ?: 'unbekannter Quelle' }}</b>, angelegt vor dem 20.07.2026 –
+                                            damals speicherte die Warteschlange noch keine Meldungsart
+                                            @if ($alt->seit)
+                                                (ab {{ \Illuminate\Support\Carbon::parse($alt->seit)->format('d.m.Y') }})
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
