@@ -92,7 +92,13 @@
                                     </div>
                                     <div class="flex justify-between gap-2">
                                         <dt>Anzahl:</dt>
-                                        <dd class="font-medium">{{ $stat?->runs ?? 0 }}</dd>
+                                        <dd class="font-medium text-right">
+                                            {{ $stat?->runs ?? 0 }}
+                                            <span class="font-normal text-gray-400"
+                                                  title="Belegter Platz der Lauf-Einträge (Ergebnis + Nachrichten + Debug) über alle Läufe dieses Tasks">
+                                                · {{ \Intranet\Modules\Ekkon\Models\TaskRun::bytes($speicher[$key] ?? 0) }}
+                                            </span>
+                                        </dd>
                                     </div>
                                     <div class="flex justify-between items-center gap-2">
                                         <dt>⌀-Dauer:</dt>

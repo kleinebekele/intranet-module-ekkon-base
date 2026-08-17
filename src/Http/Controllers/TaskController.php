@@ -37,6 +37,17 @@ class TaskController extends Controller
             ->get()
             ->keyBy('task_key');
 
+        // Belegter Platz je Task: Länge der drei Datenspalten über ALLE Zeilen
+        // (auch übersprungene) – Näherung der Nutzdaten, ohne Zeilen-Overhead
+        // und Indizes. So sieht man, welcher Task die Historie vollschreibt.
+        $laenge = fn (string $spalte): string => "coalesce(length({$spalte}), 0)";
+
+        $speicher = TaskRun::query()
+            ->select('task_key')
+            ->selectRaw('sum('.$laenge('output').' + '.$laenge('messages').' + '.$laenge('debug').') as bytes')
+            ->groupBy('task_key')
+            ->pluck('bytes', 'task_key');
+
         // Letzter abgeschlossener Lauf je Task (für Fehler-Markierung).
         $lastRuns = TaskRun::query()
             ->whereIn('id', TaskRun::query()
@@ -51,6 +62,7 @@ class TaskController extends Controller
         return view('ekkon::tasks.index', [
             'categories' => $this->pausierteAnsEnde($this->registry->byCategory(), $states),
             'stats' => $stats,
+            'speicher' => $speicher,
             'lastRuns' => $lastRuns,
             'states' => $states,
             // Doppelt vergebene Task-Keys: die verworfenen Tasks laufen NICHT.

@@ -29,4 +29,24 @@ class TaskRun extends Model
     {
         return $ms === null ? '–' : number_format($ms / 1000, 2, ',', '.');
     }
+
+    /** Belegter Platz deutsch formatiert ("1,2 MB"). */
+    public static function bytes(?float $bytes): string
+    {
+        $b = (float) $bytes;
+
+        if ($b < 1024) {
+            return number_format($b, 0, ',', '.').' B';
+        }
+
+        if ($b < 1024 ** 2) {
+            return number_format($b / 1024, 0, ',', '.').' KB';
+        }
+
+        if ($b < 1024 ** 3) {
+            return number_format($b / 1024 ** 2, 1, ',', '.').' MB';
+        }
+
+        return number_format($b / 1024 ** 3, 1, ',', '.').' GB';
+    }
 }
