@@ -38,6 +38,15 @@ class NotificationController extends Controller
             // Dropdown-Quelle: nur Meldungsarten, die ein Task auch wirklich
             // deklariert. Freitext wäre eine lautlose Fehlerquelle.
             'meldungsarten' => $this->registry->meldungsarten(),
+            // Das Konfigurations-Loch auf einen Blick: WELCHE Meldungsart hat
+            // keine Route? Ohne diese Zeile sieht man im Task-Protokoll nur
+            // eine Gesamtzahl und weiß nicht, wo man anfangen soll.
+            'ohneRoute' => Notification::query()
+                ->where('status', 'ohne_ziel')
+                ->selectRaw('meldungsart, count(*) as anzahl, max(created_at) as zuletzt')
+                ->groupBy('meldungsart')
+                ->orderByDesc('anzahl')
+                ->get(),
             'offene' => Notification::query()
                 ->whereIn('status', ['pending', 'failed', 'ohne_ziel'])
                 ->latest('id')

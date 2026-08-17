@@ -2,6 +2,7 @@
 
 namespace Intranet\Modules\Ekkon\Tasks\Notifications;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Intranet\Modules\Ekkon\Models\Notification;
 use Intranet\Modules\Ekkon\Models\TeamsChannel;
@@ -48,6 +49,9 @@ class SendNotifications extends EkkonTask
     private const PRO_LAUF = 25;
 
     private const PRUNE_TAGE = 14;
+
+    /** Merker, damit die „ohne Route"-Warnung nicht jede Minute im Protokoll steht. */
+    private const WARN_MERKER = 'ekkon-benachrichtigungen-ohne-route';
 
     public function schedule(): string
     {
@@ -100,16 +104,76 @@ class SendNotifications extends EkkonTask
         // Meldungen ohne Route sind ein Konfigurations-Loch: Irgendein Task
         // meldet etwas, das niemanden erreicht. Sichtbar machen, nicht zählen
         // und vergessen.
-        $ohneZiel = Notification::query()->where('status', 'ohne_ziel')->count();
+        $ohneZiel = Notification::query()
+            ->where('status', 'ohne_ziel')
+            ->selectRaw('meldungsart, count(*) as anzahl')
+            ->groupBy('meldungsart')
+            ->pluck('anzahl', 'meldungsart')
+            ->map(fn ($n): int => (int) $n)
+            ->all();
 
-        if ($ohneZiel > 0) {
-            $ergebnis['ohne_ziel'] = $ohneZiel;
-            $this->msg($ohneZiel.' Meldung(en) ohne passende Route – niemand wird informiert. Route in der Benachrichtigungs-Maske anlegen.');
+        ksort($ohneZiel);
+        $gesamt = array_sum($ohneZiel);
+
+        if ($gesamt > 0) {
+            $ergebnis['ohne_ziel'] = $gesamt;
+
+            if ($this->warnungFaellig($ohneZiel)) {
+                $this->msg($gesamt.' Meldung(en) ohne passende Route – niemand wird informiert ('
+                    .$this->artenKlartext($ohneZiel).'). Route in der Benachrichtigungs-Maske anlegen.');
+            }
         }
 
         $ergebnis['gepruned'] = $this->pruneAlte();
 
         return $ergebnis;
+    }
+
+    /**
+     * Darf die „ohne Route"-Warnung ins Protokoll?
+     *
+     * Dieser Task läuft JEDE MINUTE. Eine Warnung, die bei jedem Lauf mit-
+     * geschrieben wird, steht nach 14 Tagen Historie gut 20.000 Mal in
+     * ekkon_task_runs – mehrere MB derselben Zeile, und eine Lauf-Liste, in
+     * der man nichts anderes mehr sieht. Ein Dauerzustand ist keine Nachricht.
+     *
+     * Deshalb: nur, wenn sich der Stand ändert (neue Meldungsart, andere
+     * Anzahl) – und sonst einmal am Tag als Erinnerung, damit das Loch nicht
+     * lautlos liegen bleibt.
+     *
+     * @param  array<string, int>  $stand  Meldungsart => Anzahl
+     */
+    private function warnungFaellig(array $stand): bool
+    {
+        $merker = Cache::get(self::WARN_MERKER);
+        $heute = now()->toDateString();
+
+        if (is_array($merker)
+            && ($merker['stand'] ?? null) === $stand
+            && ($merker['tag'] ?? null) === $heute) {
+            return false;
+        }
+
+        Cache::put(self::WARN_MERKER, ['stand' => $stand, 'tag' => $heute], now()->addDays(30));
+
+        return true;
+    }
+
+    /**
+     * "termin-eskalation: 222, task-laufzeit: 3" – ohne die Meldungsart weiß
+     * niemand, WELCHE Route fehlt.
+     *
+     * @param  array<string, int>  $stand
+     */
+    private function artenKlartext(array $stand): string
+    {
+        $teile = [];
+
+        foreach ($stand as $art => $anzahl) {
+            $teile[] = ($art !== '' ? $art : 'ohne Meldungsart').': '.$anzahl;
+        }
+
+        return implode(', ', $teile);
     }
 
     /** @return string|null null = zugestellt, sonst Fehlertext */

@@ -265,6 +265,43 @@
                     <b>niemand wurde informiert</b>. Meldungen verschwinden hier nie stillschweigend.
                 </p>
 
+                {{-- Das Loch zuerst: WELCHE Meldungsart hat keine Route? Die Liste
+                     unten zeigt nur die letzten 50 Zeilen – bei hunderten gleichen
+                     Meldungen sieht man darin nicht, woran es liegt. --}}
+                @if ($ohneRoute->isNotEmpty())
+                    <div class="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+                        <h4 class="font-semibold text-yellow-900 mb-2">Meldungsarten ohne Route</h4>
+                        <table class="text-sm w-full">
+                            <thead class="text-left text-yellow-900/70 border-b border-yellow-200">
+                                <tr>
+                                    <th class="py-1 pr-4">Meldungsart</th>
+                                    <th class="py-1 pr-4">liegen gelassen</th>
+                                    <th class="py-1 pr-4">zuletzt</th>
+                                    <th class="py-1 pr-4">Klartext</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($ohneRoute as $zeile)
+                                    <tr class="border-b border-yellow-200 last:border-0">
+                                        <td class="py-1 pr-4 font-mono text-xs">{{ $zeile->meldungsart ?: '—' }}</td>
+                                        <td class="py-1 pr-4 font-medium">{{ $zeile->anzahl }}</td>
+                                        <td class="py-1 pr-4 text-gray-600">
+                                            {{ $zeile->zuletzt ? \Illuminate\Support\Carbon::parse($zeile->zuletzt)->format('d.m.Y H:i') : '–' }}
+                                        </td>
+                                        <td class="py-1 pr-4 text-gray-600">
+                                            {{ $meldungsarten[$zeile->meldungsart] ?? 'kein Task deklariert diese Meldungsart mehr' }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        <button type="button" @click="tab = 'routen'"
+                                class="mt-3 rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700">
+                            Route anlegen
+                        </button>
+                    </div>
+                @endif
+
                 @if ($offene->isEmpty())
                     <p class="text-sm text-gray-500 italic">Nichts offen.</p>
                 @else
