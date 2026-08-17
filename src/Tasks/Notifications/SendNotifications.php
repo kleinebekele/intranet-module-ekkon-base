@@ -5,6 +5,7 @@ namespace Intranet\Modules\Ekkon\Tasks\Notifications;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Intranet\Modules\Ekkon\Models\Notification;
+use Intranet\Modules\Ekkon\Models\NotificationRoute;
 use Intranet\Modules\Ekkon\Models\TeamsChannel;
 use Intranet\Modules\Ekkon\Services\TeamsWebhookClient;
 use Intranet\Modules\Ekkon\Tasks\EkkonTask;
@@ -114,6 +115,10 @@ class SendNotifications extends EkkonTask
 
         if (($ergebnis['gepruned_altbestand'] ?? 0) > 0) {
             $this->msg($ergebnis['gepruned_altbestand'].' Meldung(en) ohne Meldungsart entfernt (Altbestand von vor dem 20.07.2026 – bei ihnen war nicht erkennbar, welche Route fehlte).');
+        }
+
+        if (($ergebnis['gepruned_route_da'] ?? 0) > 0) {
+            $this->msg($ergebnis['gepruned_route_da'].' wartende Meldung(en) verworfen – für ihre Meldungsart gibt es inzwischen eine aktive Route. Nachträglich zustellen lassen sie sich nicht (sie wurden ohne Ziel angelegt).');
         }
 
         // Meldungen ohne Route sind ein Konfigurations-Loch: Irgendein Task
@@ -281,7 +286,7 @@ class SendNotifications extends EkkonTask
      * Meldungsart immer gesetzt). `ohne_ziel` MIT Meldungsart bleibt weiter
      * unangetastet: Das ist der Hinweis auf ein offenes Konfigurations-Loch.
      *
-     * @return array{gepruned: int, gepruned_altbestand: int}
+     * @return array{gepruned: int, gepruned_altbestand: int, gepruned_route_da: int}
      */
     private function pruneAlte(): array
     {
@@ -296,6 +301,21 @@ class SendNotifications extends EkkonTask
             ->where('created_at', '<', now()->subDays(self::PRUNE_TAGE))
             ->delete();
 
-        return ['gepruned' => $zugestellt, 'gepruned_altbestand' => $altbestand];
+        // Meldungsart hat inzwischen eine aktive Route? Dann ist das Loch
+        // geschlossen – und diese Zeilen sind erledigt. Nachträglich zustellen
+        // geht nicht (sie tragen kein Ziel, `typ = keins`), und stehen lassen
+        // heißt: Die Übersicht warnt für immer vor einer Route, die es gibt.
+        $geschlossen = Notification::query()
+            ->where('status', 'ohne_ziel')
+            ->whereIn('meldungsart', NotificationRoute::query()
+                ->where('aktiv', true)
+                ->select('meldungsart'))
+            ->delete();
+
+        return [
+            'gepruned' => $zugestellt,
+            'gepruned_altbestand' => $altbestand,
+            'gepruned_route_da' => $geschlossen,
+        ];
     }
 }
