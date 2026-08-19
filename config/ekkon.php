@@ -73,9 +73,9 @@ return [
          * dürfen langsam sein. Es geht nicht um "schnell", sondern um "endet
          * überhaupt".
          *
-         * ⚠️⚠️ AUF RAVENSBERGER GEMESSEN WIRKUNGSLOS (2026-08-05).
+         * ⚠️⚠️ IN DER PRAXIS GEMESSEN: WIRKUNGSLOS (2026-08-05).
          *
-         * `php artisan ekkon:timeout-test` dort: "DAS ZEITLIMIT GREIFT NICHT.
+         * `php artisan ekkon:timeout-test` ergab dort: "DAS ZEITLIMIT GREIFT NICHT.
          * Die Abfrage lief 30.1 Sekunden durch." PDO_ODBC reicht ATTR_TIMEOUT
          * mit dem Microsoft ODBC Driver 18 nicht als Abfrage-Zeitlimit durch.
          *
