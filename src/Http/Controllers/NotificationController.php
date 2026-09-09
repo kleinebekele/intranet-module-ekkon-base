@@ -85,15 +85,50 @@ class NotificationController extends Controller
             'notiz' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if (str_contains($daten['webhook_url'], 'outlook.office.com')) {
-            return back()->withInput()->withErrors([
-                'webhook_url' => 'Das ist eine klassische Connector-URL (outlook.office.com). Die hat Microsoft Ende 2025 abgeschaltet – bitte einen Teams-Workflow anlegen (URL auf logic.azure.com).',
-            ]);
+        if ($this->istConnectorUrl($daten['webhook_url'])) {
+            return back()->withInput()->withErrors(['webhook_url' => self::CONNECTOR_HINWEIS]);
         }
 
         TeamsChannel::create($daten + ['aktiv' => true]);
 
         return back()->with('status', 'Channel angelegt. Jetzt bitte "Test senden" – nur ein Blick in den Channel beweist, dass es ankommt.');
+    }
+
+    private const CONNECTOR_HINWEIS = 'Das ist eine klassische Connector-URL (outlook.office.com). Die hat Microsoft Ende 2025 abgeschaltet – bitte einen Teams-Workflow anlegen (URL auf logic.azure.com).';
+
+    private function istConnectorUrl(string $url): bool
+    {
+        return str_contains($url, 'outlook.office.com');
+    }
+
+    /**
+     * Name/Notiz ändern und – der eigentliche Anlass – die Webhook-URL
+     * tauschen, wenn der Workflow neu angelegt werden musste. Die gespeicherte
+     * URL wird nie angezeigt (sie ist ein Passwort); leer gelassen bleibt sie.
+     */
+    public function channelUpdate(Request $request, TeamsChannel $channel): RedirectResponse
+    {
+        $daten = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'webhook_url' => ['nullable', 'url', 'starts_with:https://', 'max:2000'],
+            'notiz' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $neueUrl = trim((string) ($daten['webhook_url'] ?? ''));
+        if ($neueUrl !== '' && $this->istConnectorUrl($neueUrl)) {
+            return back()->withInput()->withErrors(['webhook_url' => self::CONNECTOR_HINWEIS]);
+        }
+
+        $channel->name = $daten['name'];
+        $channel->notiz = $daten['notiz'] ?? null;
+        if ($neueUrl !== '') {
+            $channel->webhook_url = $neueUrl;
+        }
+        $channel->save();
+
+        return back()->with('status', $neueUrl !== ''
+            ? 'Channel gespeichert, neue Webhook-URL hinterlegt. Jetzt bitte "Test senden".'
+            : 'Channel gespeichert.');
     }
 
     public function channelToggle(TeamsChannel $channel): RedirectResponse

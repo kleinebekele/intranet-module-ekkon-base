@@ -25,6 +25,7 @@ Route::middleware(['web', 'auth'])
                 Route::get('/', [NotificationController::class, 'index'])->name('index');
 
                 Route::post('/channel', [NotificationController::class, 'channelStore'])->name('channel.store');
+                Route::put('/channel/{channel}', [NotificationController::class, 'channelUpdate'])->name('channel.update');
                 Route::post('/channel/{channel}/test', [NotificationController::class, 'channelTest'])->name('channel.test');
                 Route::post('/channel/{channel}/toggle', [NotificationController::class, 'channelToggle'])->name('channel.toggle');
                 Route::delete('/channel/{channel}', [NotificationController::class, 'channelDestroy'])->name('channel.destroy');

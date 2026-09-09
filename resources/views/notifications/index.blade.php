@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen' }">
+        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen', bearbeite: null }">
 
             {{-- Fehler aus Validierung/Test. Erfolg rendert das Core-Layout selbst. --}}
             @if ($errors->any())
@@ -211,6 +211,8 @@
                                                     @csrf
                                                     <button class="text-indigo-700 hover:underline">Test senden</button>
                                                 </form>
+                                                <button type="button" @click="bearbeite = (bearbeite === {{ $channel->id }} ? null : {{ $channel->id }})"
+                                                        class="text-gray-600 hover:underline">bearbeiten</button>
                                                 <form method="POST" action="{{ route('module.ekkon.notifications.channel.toggle', $channel) }}">
                                                     @csrf
                                                     <button class="text-gray-600 hover:underline">{{ $channel->aktiv ? 'deaktivieren' : 'aktivieren' }}</button>
@@ -221,6 +223,37 @@
                                                     <button class="text-red-700 hover:underline">löschen</button>
                                                 </form>
                                             </div>
+                                        </td>
+                                    </tr>
+                                    <tr x-show="bearbeite === {{ $channel->id }}" x-cloak class="border-b last:border-0 bg-gray-50">
+                                        <td colspan="4" class="py-3 pr-4">
+                                            <form method="POST" action="{{ route('module.ekkon.notifications.channel.update', $channel) }}"
+                                                  class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                                @csrf @method('PUT')
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                                                    <input name="name" value="{{ $channel->name }}" required
+                                                           class="w-full rounded-md border-gray-300 text-sm">
+                                                </div>
+                                                <div class="md:col-span-2">
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                                        Neue Webhook-URL <span class="text-gray-400">(leer lassen = bestehende behalten; sie wird nie angezeigt)</span>
+                                                    </label>
+                                                    <input name="webhook_url" value=""
+                                                           class="w-full rounded-md border-gray-300 text-sm" placeholder="https://…logic.azure.com/…">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">Notiz</label>
+                                                    <input name="notiz" value="{{ $channel->notiz }}"
+                                                           class="w-full rounded-md border-gray-300 text-sm" placeholder="optional">
+                                                </div>
+                                                <div class="md:col-span-4 flex gap-3 items-center">
+                                                    <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                                                        Speichern
+                                                    </button>
+                                                    <button type="button" @click="bearbeite = null" class="text-sm text-gray-600 hover:underline">abbrechen</button>
+                                                </div>
+                                            </form>
                                         </td>
                                     </tr>
                                 @endforeach
