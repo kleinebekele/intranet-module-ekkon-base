@@ -4,7 +4,26 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen', bearbeite: null, meldung: null }">
+        {{-- Der aktive Tab steht in der URL (#routen/#channels/#meldungen) und
+             überlebt so jedes Speichern/Löschen (die Formulare hängen ihn an
+             die Action). Löschen in der Meldungsliste geht per Fetch, ohne
+             Seitenwechsel – man bleibt, wo man ist. --}}
+        <div class="w-full mx-auto sm:px-6 lg:px-8"
+             x-data="{
+                tab: ['routen', 'channels', 'meldungen'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'routen',
+                bearbeite: null,
+                meldung: null,
+                geloescht: [],
+                loeschen(id, url, titel) {
+                    if (! confirm('Meldung „' + titel + '“ wirklich löschen? Sie wird dann nie zugestellt.')) return;
+                    fetch(url, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
+                    }).then(r => { if (r.ok) { this.geloescht.push(id); } else { alert('Löschen fehlgeschlagen (HTTP ' + r.status + ').'); } })
+                      .catch(() => alert('Löschen fehlgeschlagen.'));
+                }
+             }"
+             x-init="$watch('tab', t => history.replaceState(null, '', '#' + t)); document.querySelectorAll('form[method=POST]').forEach(f => f.addEventListener('submit', () => { f.action = f.action.split('#')[0] + '#' + tab; }))">
 
             {{-- Fehler aus Validierung/Test. Erfolg rendert das Core-Layout selbst. --}}
             @if ($errors->any())
@@ -388,7 +407,7 @@
                                             'fehler' => $n->letzter_fehler,
                                         ];
                                     @endphp
-                                    <tr class="border-b last:border-0 {{ $n->status === 'failed' ? 'bg-red-50' : ($n->status === 'ohne_ziel' ? 'bg-yellow-50' : '') }}">
+                                    <tr x-show="! geloescht.includes({{ $n->id }})" class="border-b last:border-0 {{ $n->status === 'failed' ? 'bg-red-50' : ($n->status === 'ohne_ziel' ? 'bg-yellow-50' : '') }}">
                                         <td class="py-2 pr-4 whitespace-nowrap text-gray-600">{{ $n->created_at?->format('d.m.Y H:i') }}</td>
                                         <td class="py-2 pr-4 font-medium">{{ $n->status }}</td>
                                         <td class="py-2 pr-4">{{ $n->typ }}</td>
@@ -407,11 +426,8 @@
                                                         <button class="text-indigo-700 hover:underline">erneut</button>
                                                     </form>
                                                 @endif
-                                                <form method="POST" action="{{ route('module.ekkon.notifications.destroy', $n) }}"
-                                                      onsubmit="return confirm('Meldung „{{ addslashes($n->titel) }}“ wirklich löschen? Sie wird dann nie zugestellt.')">
-                                                    @csrf @method('DELETE')
-                                                    <button class="text-red-700 hover:underline">löschen</button>
-                                                </form>
+                                                <button type="button" class="text-red-700 hover:underline"
+                                                        @click="loeschen({{ $n->id }}, '{{ route('module.ekkon.notifications.destroy', $n) }}', {{ \Illuminate\Support\Js::from($n->titel) }})">löschen</button>
                                             </div>
                                         </td>
                                     </tr>

@@ -3,6 +3,7 @@
 namespace Intranet\Modules\Ekkon\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
@@ -248,9 +249,15 @@ class NotificationController extends Controller
      * erreichen soll. Löschen ist die einzige Art, wie eine Meldung hier
      * verschwindet; still passiert das nie.
      */
-    public function destroy(Notification $notification): RedirectResponse
+    public function destroy(Request $request, Notification $notification): RedirectResponse|JsonResponse
     {
         $notification->delete();
+
+        // Die Liste löscht per Fetch (man bleibt, wo man ist); das Formular-
+        // Fallback bekommt weiter den Redirect.
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
 
         return back()->with('status', 'Meldung gelöscht.');
     }
