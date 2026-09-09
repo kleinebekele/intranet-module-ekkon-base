@@ -14,13 +14,13 @@
                 bearbeite: null,
                 meldung: null,
                 geloescht: [],
-                loeschen(id, url, titel) {
-                    if (! confirm('Meldung „' + titel + '“ wirklich löschen? Sie wird dann nie zugestellt.')) return;
+                // Bewusst OHNE Rückfrage: hier räumt man in Serie auf, jede Frage bremst.
+                loeschen(id, url) {
                     fetch(url, {
                         method: 'DELETE',
                         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
-                    }).then(r => { if (r.ok) { this.geloescht.push(id); } else { alert('Löschen fehlgeschlagen (HTTP ' + r.status + ').'); } })
-                      .catch(() => alert('Löschen fehlgeschlagen.'));
+                    }).then(r => { if (r.ok) { this.geloescht.push(id); } else { (window.hinweis ?? alert)('Löschen fehlgeschlagen (HTTP ' + r.status + ').'); } })
+                      .catch(() => (window.hinweis ?? alert)('Löschen fehlgeschlagen.'));
                 }
              }"
              x-init="$watch('tab', t => history.replaceState(null, '', '#' + t)); document.querySelectorAll('form[method=POST]').forEach(f => f.addEventListener('submit', () => { f.action = f.action.split('#')[0] + '#' + tab; }))">
@@ -427,7 +427,7 @@
                                                     </form>
                                                 @endif
                                                 <button type="button" class="text-red-700 hover:underline"
-                                                        @click="loeschen({{ $n->id }}, '{{ route('module.ekkon.notifications.destroy', $n) }}', {{ \Illuminate\Support\Js::from($n->titel) }})">löschen</button>
+                                                        @click="loeschen({{ $n->id }}, '{{ route('module.ekkon.notifications.destroy', $n) }}')">löschen</button>
                                             </div>
                                         </td>
                                     </tr>
