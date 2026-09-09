@@ -64,6 +64,9 @@ bewusst dumm (`src/Tasks/Notifications/SendNotifications.php`).
   nur diese an.
 - Teams läuft über einen **Workflow**, nicht über den klassischen Connector (der ist abgekündigt).
 - Zustellung über eigene Tabelle + Task, bewusst **nicht** über die Laravel-Queue.
+- Liegengebliebene Meldungen (`failed`, `ohne_ziel`) meldet der Provider an die **Glocke** des
+  Cores (`App\Support\Hinweise`, `hinweiseAnmelden()`), nur für Admins. Ohne die Klasse
+  (älterer Core) passiert nichts.
 
 ## Sicherheitsschalter
 

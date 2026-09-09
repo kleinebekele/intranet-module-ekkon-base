@@ -7,6 +7,7 @@ use App\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Intranet\Modules\Ekkon\Console\RunTaskCommand;
 use Intranet\Modules\Ekkon\Console\TimeoutTestCommand;
+use Intranet\Modules\Ekkon\Models\Notification;
 use Intranet\Modules\Ekkon\Models\TaskRun;
 use Intranet\Modules\Ekkon\Support\TaskRegistry;
 
@@ -61,6 +62,7 @@ class EkkonServiceProvider extends ModuleServiceProvider
         // die Bearbeitung unter Verwaltung → Mailvorlagen, in der Konsole für den
         // Versand durch SendNotifications.
         $this->benachrichtigungsVorlagenAnmelden();
+        $this->hinweiseAnmelden();
 
         if (! $this->app->runningInConsole()) {
             return;
@@ -88,6 +90,54 @@ class EkkonServiceProvider extends ModuleServiceProvider
             $schedule->call(function (): void {
                 TaskRun::query()->where('started_at', '<', now()->subDays(14))->delete();
             })->dailyAt('04:15');
+        });
+    }
+
+    /**
+     * Liegengebliebene Benachrichtigungen an die Glocke in der Kopfzeile melden
+     * (Core ab 2026-09-09, `App\Support\Hinweise`). Zwei Zustände, die sonst nur
+     * im Log und auf der Benachrichtigungs-Seite auffallen:
+     *  - failed    – drei Zustellversuche erfolglos (z. B. Teams-Workflow gelöscht),
+     *  - ohne_ziel – Meldungsart ohne aktive Route, niemand wurde informiert.
+     * Nur für Admins – die Seite dahinter ist ohnehin Admin-only. Ein älterer Core
+     * ohne die Klasse bekommt schlicht keine Glocke.
+     */
+    private function hinweiseAnmelden(): void
+    {
+        if (! class_exists(\App\Support\Hinweise::class)) {
+            return;
+        }
+
+        \App\Support\Hinweise::anbieten(function (\App\Models\User $user): array {
+            if (! $user->isAdmin()) {
+                return [];
+            }
+
+            $url = route('module.ekkon.notifications.index');
+            $quelle = 'Ekkon · Benachrichtigungen';
+            $hinweise = [];
+
+            $failed = Notification::query()->where('status', 'failed')->count();
+            if ($failed > 0) {
+                $hinweise[] = new \App\Support\Hinweis(
+                    $failed.' Benachrichtigung(en) nicht zugestellt – Zustellweg prüfen',
+                    $url,
+                    $quelle,
+                    $failed,
+                );
+            }
+
+            $ohneZiel = Notification::query()->where('status', 'ohne_ziel')->count();
+            if ($ohneZiel > 0) {
+                $hinweise[] = new \App\Support\Hinweis(
+                    $ohneZiel.' Meldung(en) ohne Route – niemand wurde informiert',
+                    $url,
+                    $quelle,
+                    $ohneZiel,
+                );
+            }
+
+            return $hinweise;
         });
     }
 
