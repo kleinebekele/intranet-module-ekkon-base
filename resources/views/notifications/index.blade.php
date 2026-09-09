@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen', bearbeite: null }">
+        <div class="w-full mx-auto sm:px-6 lg:px-8" x-data="{ tab: 'routen', bearbeite: null, meldung: null }">
 
             {{-- Fehler aus Validierung/Test. Erfolg rendert das Core-Layout selbst. --}}
             @if ($errors->any())
@@ -361,6 +361,7 @@
                         <table class="min-w-full text-sm">
                             <thead class="text-left text-gray-500 border-b">
                                 <tr>
+                                    <th class="py-2 pr-4">Datum</th>
                                     <th class="py-2 pr-4">Status</th>
                                     <th class="py-2 pr-4">Typ</th>
                                     <th class="py-2 pr-4">Titel</th>
@@ -372,20 +373,46 @@
                             </thead>
                             <tbody>
                                 @foreach ($offene as $n)
+                                    @php
+                                        $details = [
+                                            'datum' => $n->created_at?->format('d.m.Y H:i:s'),
+                                            'status' => $n->status,
+                                            'typ' => $n->typ,
+                                            'ziel' => $n->ziel,
+                                            'meldungsart' => $n->meldungsart,
+                                            'quelle' => $n->quelle,
+                                            'versuche' => $n->versuche,
+                                            'titel' => $n->titel,
+                                            'text' => $n->text,
+                                            'daten' => $n->daten ? json_encode($n->daten, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                                            'fehler' => $n->letzter_fehler,
+                                        ];
+                                    @endphp
                                     <tr class="border-b last:border-0 {{ $n->status === 'failed' ? 'bg-red-50' : ($n->status === 'ohne_ziel' ? 'bg-yellow-50' : '') }}">
+                                        <td class="py-2 pr-4 whitespace-nowrap text-gray-600">{{ $n->created_at?->format('d.m.Y H:i') }}</td>
                                         <td class="py-2 pr-4 font-medium">{{ $n->status }}</td>
                                         <td class="py-2 pr-4">{{ $n->typ }}</td>
-                                        <td class="py-2 pr-4">{{ $n->titel }}</td>
+                                        <td class="py-2 pr-4">
+                                            <button type="button" @click="meldung = {{ \Illuminate\Support\Js::from($details) }}"
+                                                    class="text-left text-indigo-700 hover:underline" title="Ganze Meldung anzeigen">{{ $n->titel }}</button>
+                                        </td>
                                         <td class="py-2 pr-4 font-mono text-xs text-gray-500">{{ $n->quelle }}</td>
                                         <td class="py-2 pr-4">{{ $n->versuche }}</td>
-                                        <td class="py-2 pr-4 text-red-700 text-xs">{{ $n->letzter_fehler }}</td>
+                                        <td class="py-2 pr-4 text-red-700 text-xs max-w-md truncate" title="{{ $n->letzter_fehler }}">{{ $n->letzter_fehler }}</td>
                                         <td class="py-2 pr-4">
-                                            @if ($n->status === 'failed')
-                                                <form method="POST" action="{{ route('module.ekkon.notifications.retry', $n) }}">
-                                                    @csrf
-                                                    <button class="text-indigo-700 hover:underline">erneut</button>
+                                            <div class="flex flex-wrap gap-2 whitespace-nowrap">
+                                                @if ($n->status === 'failed')
+                                                    <form method="POST" action="{{ route('module.ekkon.notifications.retry', $n) }}">
+                                                        @csrf
+                                                        <button class="text-indigo-700 hover:underline">erneut</button>
+                                                    </form>
+                                                @endif
+                                                <form method="POST" action="{{ route('module.ekkon.notifications.destroy', $n) }}"
+                                                      onsubmit="return confirm('Meldung „{{ addslashes($n->titel) }}“ wirklich löschen? Sie wird dann nie zugestellt.')">
+                                                    @csrf @method('DELETE')
+                                                    <button class="text-red-700 hover:underline">löschen</button>
                                                 </form>
-                                            @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -393,6 +420,48 @@
                         </table>
                     </div>
                 @endif
+
+                {{-- Modal: die ganze Meldung, so wie sie zugestellt worden wäre --}}
+                <div x-show="meldung !== null" x-cloak @keydown.escape.window="meldung = null"
+                     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50">
+                    <div @click.outside="meldung = null" class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl">
+                        <div class="flex items-start justify-between gap-4 border-b px-5 py-3">
+                            <div>
+                                <h4 class="font-semibold text-gray-800" x-text="meldung?.titel"></h4>
+                                <p class="text-xs text-gray-500">
+                                    <span x-text="meldung?.datum"></span> ·
+                                    <span x-text="meldung?.status"></span> ·
+                                    <span x-text="meldung?.typ"></span>
+                                    <template x-if="meldung?.ziel"><span> → <span x-text="meldung.ziel"></span></span></template>
+                                </p>
+                            </div>
+                            <button type="button" @click="meldung = null" class="text-gray-400 hover:text-gray-700 text-xl leading-none" aria-label="Schließen">&times;</button>
+                        </div>
+                        <div class="px-5 py-4 space-y-4 text-sm">
+                            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                                <div><dt class="text-gray-500">Meldungsart</dt><dd class="font-mono" x-text="meldung?.meldungsart || '—'"></dd></div>
+                                <div><dt class="text-gray-500">Quelle</dt><dd class="font-mono" x-text="meldung?.quelle || '—'"></dd></div>
+                                <div><dt class="text-gray-500">Versuche</dt><dd x-text="meldung?.versuche"></dd></div>
+                            </dl>
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">Text</div>
+                                <pre class="whitespace-pre-wrap font-sans rounded bg-gray-50 p-3" x-text="meldung?.text"></pre>
+                            </div>
+                            <template x-if="meldung?.daten">
+                                <div>
+                                    <div class="text-xs text-gray-500 mb-1">Daten</div>
+                                    <pre class="whitespace-pre-wrap text-xs rounded bg-gray-50 p-3 overflow-x-auto" x-text="meldung.daten"></pre>
+                                </div>
+                            </template>
+                            <template x-if="meldung?.fehler">
+                                <div>
+                                    <div class="text-xs text-gray-500 mb-1">Letzter Fehler</div>
+                                    <pre class="whitespace-pre-wrap text-xs rounded bg-red-50 text-red-800 p-3 overflow-x-auto" x-text="meldung.fehler"></pre>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
 
                 @if ($letzte->isNotEmpty())
                     <h4 class="font-medium text-gray-600 mt-6 mb-2 text-sm">Zuletzt versendet</h4>

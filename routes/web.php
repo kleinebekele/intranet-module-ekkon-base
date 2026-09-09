@@ -35,6 +35,7 @@ Route::middleware(['web', 'auth'])
                 Route::delete('/route/{route}', [NotificationController::class, 'routeDestroy'])->name('route.destroy');
 
                 Route::post('/{notification}/retry', [NotificationController::class, 'retry'])->name('retry');
+                Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
             });
         });
     });

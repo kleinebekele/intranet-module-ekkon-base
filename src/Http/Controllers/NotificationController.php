@@ -241,4 +241,17 @@ class NotificationController extends Controller
 
         return back()->with('status', 'Benachrichtigung wird beim nächsten Lauf erneut versucht.');
     }
+
+    /**
+     * Eine liegengebliebene Meldung bewusst verwerfen – z. B. nachdem der
+     * Zustand längst behoben ist oder die Meldung ohnehin niemanden mehr
+     * erreichen soll. Löschen ist die einzige Art, wie eine Meldung hier
+     * verschwindet; still passiert das nie.
+     */
+    public function destroy(Notification $notification): RedirectResponse
+    {
+        $notification->delete();
+
+        return back()->with('status', 'Meldung gelöscht.');
+    }
 }
