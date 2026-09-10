@@ -262,6 +262,7 @@ abstract class EkkonTask
         string $text,
         array $daten = [],
         ?string $idempotenzSchluessel = null,
+        ?string $html = null,
     ): array {
         return (new Benachrichtiger())->benachrichtige(
             $meldungsart,
@@ -270,6 +271,7 @@ abstract class EkkonTask
             $daten,
             $idempotenzSchluessel,
             $this->key(),
+            $html,
         );
     }
 

@@ -8,6 +8,7 @@ use Intranet\Modules\Ekkon\Models\Notification;
 use Intranet\Modules\Ekkon\Models\NotificationRoute;
 use Intranet\Modules\Ekkon\Models\TeamsChannel;
 use Intranet\Modules\Ekkon\Services\TeamsWebhookClient;
+use Intranet\Modules\Ekkon\Support\HtmlText;
 use Intranet\Modules\Ekkon\Tasks\EkkonTask;
 use Throwable;
 
@@ -216,10 +217,14 @@ class SendNotifications extends EkkonTask
             return 'Teams-Channel "'.$channel->name.'" ist deaktiviert.';
         }
 
+        // Adaptive Cards können kein HTML, aber ein kleines Markdown – liegt eine
+        // HTML-Fassung vor, geht die als Markdown, sonst der Klartext.
+        $text = filled($n->html) ? HtmlText::zuMarkdown((string) $n->html) : (string) $n->text;
+
         return (new TeamsWebhookClient())->sende(
             (string) $channel->webhook_url,
             (string) $n->titel,
-            (string) $n->text,
+            $text,
             (array) ($n->daten ?? []),
         );
     }
@@ -231,14 +236,23 @@ class SendNotifications extends EkkonTask
             // (HTML + Text, gerahmt). Der Versand läuft über den Mail-Ausgangs-
             // korb – dort greift auch die Zustellbarkeitsprüfung.
             if ($this->vorlageVorhanden($n)) {
+                // Liegt eine HTML-Fassung vor, bekommt die HTML-Mail sie und die
+                // Textfassung den Klartext – der Empfänger sieht, was sein Programm
+                // kann (multipart/alternative). Ohne HTML: Klartext in beiden.
+                $werte = [
+                    'ueberschrift' => (string) $n->titel,
+                    // Die Vorlage setzt white-space:pre-line – Zeilenumbrüche im
+                    // HTML-Quelltext würden sonst zu sichtbaren Leerzeilen.
+                    'text' => filled($n->html) ? (string) preg_replace('/\s+/', ' ', (string) $n->html) : (string) $n->text,
+                    'quelle' => (string) ($n->quelle ?: '—'),
+                ];
+                $textWerte = filled($n->html) ? ['text' => (string) $n->text] : [];
+
                 app(\App\Mail\Vorlagen\VorlagenMailer::class)->senden(
                     'ekkon:'.$n->meldungsart,
                     (string) $n->ziel,
-                    [
-                        'ueberschrift' => (string) $n->titel,
-                        'text' => (string) $n->text,
-                        'quelle' => (string) ($n->quelle ?: '—'),
-                    ],
+                    $werte,
+                    $textWerte,
                 );
 
                 return null;

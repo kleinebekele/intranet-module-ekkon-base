@@ -40,6 +40,7 @@ class Benachrichtiger
         array $daten = [],
         ?string $idempotenzSchluessel = null,
         ?string $quelle = null,
+        ?string $html = null,
     ): array {
         $routen = NotificationRoute::query()
             ->where('meldungsart', $meldungsart)
@@ -55,6 +56,7 @@ class Benachrichtiger
                 'ziel' => null,
                 'titel' => $titel,
                 'text' => $text,
+                'html' => $html,
                 'daten' => $daten,
                 'quelle' => $quelle,
                 'meldungsart' => $meldungsart,
@@ -86,6 +88,7 @@ class Benachrichtiger
                     'ziel' => $ziel,
                     'titel' => $titel,
                     'text' => $text,
+                'html' => $html,
                     'daten' => $daten,
                     'quelle' => $quelle,
                     'meldungsart' => $meldungsart,

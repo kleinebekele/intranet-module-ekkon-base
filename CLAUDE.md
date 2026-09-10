@@ -76,6 +76,12 @@ keine Session, kein CSRF; Drossel 120/min). Der Schlüssel in der URL ist das Pa
 bis 1 MB, IP gekürzt); Admin-Seite „Webhook-Eingang" zeigt und löscht. Fachlogik (z. B. Sally.io-
 Zusammenfassungen nach Titel routen) kommt als Task obendrauf, nicht in den Empfang.
 
+Erster Task darauf: `Webhooks/SallyZusammenfassung` (alle 5 Min): erkennt Sally-Eingänge am Inhalt
+(`recordingSummaryId` + `appointmentSubject`), macht je Termin-Titel eine Meldungsart `sally-<slug>`
+(WG/AW-Präfixe entfernt; Liste entsteht aus den bisher gesehenen Titeln → erster Eingang landet auf
+`ohne_ziel`, danach Route anlegen). Benachrichtigungen tragen seitdem optional `html`: Mail = HTML +
+Klartext (`VorlagenMailer` mit `$textWerte`), Teams = Markdown (`SupportHtmlText`).
+
 ## Sicherheitsschalter
 
 Ohne **`EKKON_TASKS_ENABLED=true`** läuft **kein** Task — auch nicht „jetzt ausführen" in der
