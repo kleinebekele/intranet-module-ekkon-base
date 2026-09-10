@@ -19,6 +19,7 @@ class WebhookEingang extends Model
         return [
             'headers' => 'array',
             'created_at' => 'datetime',
+            'verarbeitet_am' => 'datetime',
         ];
     }
 

@@ -93,6 +93,19 @@ class WebhookController extends Controller
         return back()->with('status', 'Quelle samt Eingängen gelöscht.');
     }
 
+    /**
+     * „erneut verarbeiten": die Verarbeitungsmarke löschen, der zuständige Task
+     * (z. B. Webhooks/SallyZusammenfassung, alle 5 Min) nimmt den Eingang beim
+     * nächsten Lauf wieder mit. Eine bereits zugestellte Meldung wird dabei
+     * nicht doppelt angelegt (Idempotenz-Schlüssel des Tasks).
+     */
+    public function eingangErneut(WebhookEingang $eingang): RedirectResponse
+    {
+        $eingang->update(['verarbeitet_am' => null, 'verarbeitung' => null]);
+
+        return back()->with('status', 'Eingang wird beim nächsten Lauf erneut verarbeitet (spätestens in 5 Minuten).');
+    }
+
     public function eingangDestroy(Request $request, WebhookEingang $eingang): RedirectResponse|JsonResponse
     {
         $eingang->delete();

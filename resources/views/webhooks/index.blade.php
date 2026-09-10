@@ -136,6 +136,7 @@
                                     <th class="py-2 pr-4">Typ</th>
                                     <th class="py-2 pr-4">Größe</th>
                                     <th class="py-2 pr-4">Anfang</th>
+                                    <th class="py-2 pr-4">Verarbeitung</th>
                                     <th class="py-2 pr-4"></th>
                                 </tr>
                             </thead>
@@ -159,10 +160,25 @@
                                         <td class="py-2 pr-4">{{ $e->quelle?->name }}</td>
                                         <td class="py-2 pr-4 text-xs text-gray-500">{{ $e->content_type }}</td>
                                         <td class="py-2 pr-4 whitespace-nowrap">{{ number_format($e->groesse / 1024, 1, ',', '.') }} KB</td>
-                                        <td class="py-2 pr-4 font-mono text-xs text-gray-500 max-w-lg truncate">{{ mb_substr((string) $e->body, 0, 120) }}</td>
+                                        <td class="py-2 pr-4 font-mono text-xs text-gray-500 max-w-md truncate">{{ mb_substr((string) $e->body, 0, 120) }}</td>
+                                        <td class="py-2 pr-4 text-xs whitespace-nowrap">
+                                            @if ($e->verarbeitet_am)
+                                                <span class="text-gray-600" title="{{ $e->verarbeitet_am->format('d.m.Y H:i:s') }}">{{ $e->verarbeitung ?: 'verarbeitet' }}</span>
+                                            @else
+                                                <span class="text-yellow-700 bg-yellow-100 rounded px-2 py-0.5 font-semibold">wartet</span>
+                                            @endif
+                                        </td>
                                         <td class="py-2 pr-4">
-                                            <button type="button" class="text-red-700 hover:underline"
-                                                    @click.stop="loeschen({{ $e->id }}, '{{ route('module.ekkon.webhooks.eingang.destroy', $e) }}')">löschen</button>
+                                            <div class="flex flex-wrap gap-2 whitespace-nowrap">
+                                                @if ($e->verarbeitet_am)
+                                                    <form method="POST" action="{{ route('module.ekkon.webhooks.eingang.erneut', $e) }}" @click.stop @submit.stop>
+                                                        @csrf
+                                                        <button class="text-indigo-700 hover:underline" title="Verarbeitungsmarke löschen – der Task nimmt den Eingang beim nächsten Lauf wieder mit">erneut verarbeiten</button>
+                                                    </form>
+                                                @endif
+                                                <button type="button" class="text-red-700 hover:underline"
+                                                        @click.stop="loeschen({{ $e->id }}, '{{ route('module.ekkon.webhooks.eingang.destroy', $e) }}')">löschen</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
