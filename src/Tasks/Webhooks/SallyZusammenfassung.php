@@ -76,7 +76,10 @@ class SallyZusammenfassung extends EkkonTask
 
             $termin = $sally['datum']?->format('d.m.Y H:i');
             $html = $sally['html'];
-            $text = $html !== '' ? HtmlText::zuText($html) : $sally['text'];
+            // `summary` ist bei Sally bereits Markdown – das versteht Teams direkt
+            // und ist als Textfassung einer Mail gut lesbar. Nur die #-Überschriften
+            // kennt die Adaptive Card nicht → fett. Ohne summary: aus dem HTML.
+            $text = $sally['text'] !== '' ? self::markdownFuerTeams($sally['text']) : HtmlText::zuText($html);
 
             $res = $this->benachrichtige(
                 $art,
@@ -129,6 +132,21 @@ class SallyZusammenfassung extends EkkonTask
             'text' => trim((string) ($json['summary'] ?? '')),
             'html' => trim((string) ($json['combinedFullSummaryHTML'] ?? '')),
         ];
+    }
+
+    /**
+     * Markdown so, wie Teams-Adaptive-Cards es rendern: `# Überschrift` → `**Überschrift**`
+     * (Überschriften kennt die Karte nicht), Rest bleibt (fett, Listen, Links).
+     * Escapte Zeilenumbrüche („\n" als zwei Zeichen) werden echte.
+     */
+    public static function markdownFuerTeams(string $md): string
+    {
+        $md = str_replace(["\r\n", '\\n'], "\n", $md);
+        $md = preg_replace('/^#{1,6}\s+(.+?)\s*#*\s*$/m', '**$1**', $md) ?? $md;
+        // Zwei Leerzeichen am Zeilenende = Markdown-Umbruch; als echter Umbruch lesbarer.
+        $md = preg_replace('/ {2,}\n/', "\n", $md) ?? $md;
+
+        return trim($md);
     }
 
     /** „WG: AW: Daily: …" → „Daily: …" – Weiterleitungs-/Antwort-Präfixe sind kein Titel. */

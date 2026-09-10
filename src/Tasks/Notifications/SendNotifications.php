@@ -217,9 +217,13 @@ class SendNotifications extends EkkonTask
             return 'Teams-Channel "'.$channel->name.'" ist deaktiviert.';
         }
 
-        // Adaptive Cards können kein HTML, aber ein kleines Markdown – liegt eine
-        // HTML-Fassung vor, geht die als Markdown, sonst der Klartext.
-        $text = filled($n->html) ? HtmlText::zuMarkdown((string) $n->html) : (string) $n->text;
+        // Adaptive Cards rendern ein kleines Markdown (fett, Listen, Links), aber
+        // kein HTML. Der Klartext geht so raus, wie der Task ihn geschrieben hat –
+        // er darf Markdown enthalten. Nur wenn er fehlt, wird die HTML-Fassung
+        // in Markdown übersetzt.
+        $text = trim((string) $n->text) !== '' || blank($n->html)
+            ? (string) $n->text
+            : HtmlText::zuMarkdown((string) $n->html);
 
         return (new TeamsWebhookClient())->sende(
             (string) $channel->webhook_url,
