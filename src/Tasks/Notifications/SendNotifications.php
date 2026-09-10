@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Mail;
 use Intranet\Modules\Ekkon\Models\Notification;
 use Intranet\Modules\Ekkon\Models\NotificationRoute;
 use Intranet\Modules\Ekkon\Models\TeamsChannel;
+use Intranet\Modules\Ekkon\Services\Benachrichtiger;
 use Intranet\Modules\Ekkon\Services\TeamsWebhookClient;
 use Intranet\Modules\Ekkon\Support\HtmlText;
 use Intranet\Modules\Ekkon\Tasks\EkkonTask;
@@ -119,7 +120,7 @@ class SendNotifications extends EkkonTask
         }
 
         if (($ergebnis['gepruned_route_da'] ?? 0) > 0) {
-            $this->msg($ergebnis['gepruned_route_da'].' wartende Meldung(en) verworfen – für ihre Meldungsart gibt es inzwischen eine aktive Route. Nachträglich zustellen lassen sie sich nicht (sie wurden ohne Ziel angelegt).');
+            $this->msg($ergebnis['gepruned_route_da'].' wartende Meldung(en) hatten inzwischen eine Route – '.($ergebnis['nachgereicht'] ?? 0).' Zielzeile(n) nachgereicht, gehen mit dem nächsten Lauf raus.');
         }
 
         // Meldungen ohne Route sind ein Konfigurations-Loch: Irgendein Task
@@ -319,21 +320,58 @@ class SendNotifications extends EkkonTask
             ->where('created_at', '<', now()->subDays(self::PRUNE_TAGE))
             ->delete();
 
-        // Meldungsart hat inzwischen eine aktive Route? Dann ist das Loch
-        // geschlossen – und diese Zeilen sind erledigt. Nachträglich zustellen
-        // geht nicht (sie tragen kein Ziel, `typ = keins`), und stehen lassen
-        // heißt: Die Übersicht warnt für immer vor einer Route, die es gibt.
-        $geschlossen = Notification::query()
+        // Meldungsart hat inzwischen eine aktive Route? Dann wird die wartende
+        // Meldung JETZT an die neuen Ziele geroutet (Titel/Text/HTML/Daten liegen
+        // ja vor) und die Zeile ohne Ziel verschwindet. Früher wurde sie einfach
+        // gelöscht – eine Meeting-Zusammenfassung, die man nur deshalb nie sah,
+        // weil die Route eine Stunde zu spät kam, ist aber kein „Loch geschlossen".
+        $nachgereicht = 0;
+        $wartend = Notification::query()
             ->where('status', 'ohne_ziel')
             ->whereIn('meldungsart', NotificationRoute::query()
                 ->where('aktiv', true)
                 ->select('meldungsart'))
-            ->delete();
+            ->orderBy('id')
+            ->limit(200)
+            ->get();
+
+        foreach ($wartend as $n) {
+            $res = (new Benachrichtiger())->benachrichtige(
+                (string) $n->meldungsart,
+                (string) $n->titel,
+                (string) $n->text,
+                (array) ($n->daten ?? []),
+                $this->basisSchluessel($n),
+                $n->quelle,
+                $n->html,
+            );
+            if (! $res['ohne_ziel']) {
+                $n->delete();
+                $nachgereicht += $res['angelegt'];
+            }
+        }
 
         return [
             'gepruned' => $zugestellt,
             'gepruned_altbestand' => $altbestand,
-            'gepruned_route_da' => $geschlossen,
+            'gepruned_route_da' => $wartend->count(),
+            'nachgereicht' => $nachgereicht,
         ];
+    }
+
+    /**
+     * Der Idempotenz-Schlüssel einer Zeile ohne Ziel lautet `<basis>|ohne_ziel:<art>`
+     * (Benachrichtiger::schluessel). Für die Nachzustellung brauchen wir die Basis
+     * zurück – sonst hieße jede Zielzeile gleich und würde am UNIQUE scheitern.
+     */
+    private function basisSchluessel(Notification $n): ?string
+    {
+        $s = (string) $n->idempotenz_schluessel;
+        if ($s === '') {
+            return null;
+        }
+        $pos = strpos($s, '|ohne_ziel:');
+
+        return $pos === false ? $s : substr($s, 0, $pos);
     }
 }
