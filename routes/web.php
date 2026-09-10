@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
 use Intranet\Modules\Ekkon\Http\Controllers\NotificationController;
 use Intranet\Modules\Ekkon\Http\Controllers\TaskController;
+use Intranet\Modules\Ekkon\Http\Controllers\WebhookController;
 
 Route::middleware(['web', 'auth'])
     ->prefix('modules/ekkon')
@@ -37,5 +38,22 @@ Route::middleware(['web', 'auth'])
                 Route::post('/{notification}/retry', [NotificationController::class, 'retry'])->name('retry');
                 Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
             });
+
+            // Webhook-Eingang (Admin-Seite): Schlüssel sind Passwörter.
+            Route::prefix('webhooks')->name('webhooks.')->group(function (): void {
+                Route::get('/', [WebhookController::class, 'index'])->name('index');
+                Route::post('/quelle', [WebhookController::class, 'quelleStore'])->name('quelle.store');
+                Route::post('/quelle/{quelle}/toggle', [WebhookController::class, 'quelleToggle'])->name('quelle.toggle');
+                Route::delete('/quelle/{quelle}', [WebhookController::class, 'quelleDestroy'])->name('quelle.destroy');
+                Route::delete('/eingang/{eingang}', [WebhookController::class, 'eingangDestroy'])->name('eingang.destroy');
+            });
         });
     });
+
+// Öffentlicher Empfang: bewusst OHNE 'web' (keine Session, kein CSRF) – der
+// Absender ist ein fremder Dienst. Der Schlüssel in der URL ist die Zugangsprüfung,
+// die Drossel fängt Dauerfeuer ab. Name ohne 'module.'-Präfix, damit die
+// Modul-Zugriffsprüfung des Cores hier nicht greift.
+Route::post('/webhooks/ekkon/{schluessel}', [WebhookController::class, 'empfangen'])
+    ->middleware('throttle:120,1')
+    ->name('ekkon.webhook.empfangen');

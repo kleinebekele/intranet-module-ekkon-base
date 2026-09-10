@@ -68,6 +68,14 @@ bewusst dumm (`src/Tasks/Notifications/SendNotifications.php`).
   Cores (`App\Support\Hinweise`, `hinweiseAnmelden()`), nur für Admins. Ohne die Klasse
   (älterer Core) passiert nichts.
 
+## Webhook-Eingang
+
+`POST /webhooks/ekkon/{schluessel}` (Route `ekkon.webhook.empfangen`, bewusst OHNE `web`-Middleware:
+keine Session, kein CSRF; Drossel 120/min). Der Schlüssel in der URL ist das Passwort, unbekannt/inaktiv
+→ 404. Alles wird roh gespeichert (`ekkon_webhook_eingaenge`: Header ohne Authorization/Cookie, Body
+bis 1 MB, IP gekürzt); Admin-Seite „Webhook-Eingang" zeigt und löscht. Fachlogik (z. B. Sally.io-
+Zusammenfassungen nach Titel routen) kommt als Task obendrauf, nicht in den Empfang.
+
 ## Sicherheitsschalter
 
 Ohne **`EKKON_TASKS_ENABLED=true`** läuft **kein** Task — auch nicht „jetzt ausführen" in der

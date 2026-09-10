@@ -26,7 +26,8 @@ class EkkonServiceProvider extends ModuleServiceProvider
             // Betriebswerkzeug wie die Aufgaben: Die Route trägt hart
             // EnsureUserIsAdmin (Webhook-URLs sind Passwörter). Neuer Menüpunkt
             // startet ohne Rollen = nur Admin – passt.
-            ->item('notifications', 'Benachrichtigungen', 'module.ekkon.notifications.index');
+            ->item('notifications', 'Benachrichtigungen', 'module.ekkon.notifications.index')
+            ->item('webhooks', 'Webhook-Eingang', 'module.ekkon.webhooks.index');
     }
 
     public function register(): void
