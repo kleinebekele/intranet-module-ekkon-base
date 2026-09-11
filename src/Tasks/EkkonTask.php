@@ -56,7 +56,7 @@ abstract class EkkonTask
      *
      *   public array $einstellungen = [
      *       'probelauf' => [
-     *           'typ' => 'ja_nein',           // ja_nein | text | zahl | auswahl
+     *           'typ' => 'ja_nein',           // ja_nein | text | zahl | auswahl | view
      *           'label' => 'Probelauf',
      *           'standard' => true,
      *           'hilfe' => 'Liest und berichtet, schreibt aber nichts.',
@@ -64,11 +64,20 @@ abstract class EkkonTask
      *       'grenze' => ['typ' => 'zahl', 'label' => 'Höchstzahl', 'standard' => 100],
      *       'modus' => ['typ' => 'auswahl', 'label' => 'Modus', 'standard' => 'sanft',
      *                   'optionen' => ['sanft' => 'Sanft', 'hart' => 'Hart']],
+     *       'gruppen' => ['typ' => 'view', 'view' => 'meinmodul::ekkon.gruppen', 'standard' => ''],
      *   ];
      *
      * Aus dieser Deklaration baut die Task-Detailseite selbstständig eine Maske.
      * Ein Task muss dafür nichts weiter tun – kein Formular, kein Controller,
      * keine `.env`-Variable. Gelesen wird mit $this->einstellung('probelauf').
+     *
+     * Ausnahme `view`: Für Einstellungen, die eine eigene Bedienung brauchen
+     * (Listen, Mehrfachauswahl aus Live-Daten), bringt das Fachmodul eine
+     * Blade-View mit. Sie wird unter dem Formular eingebunden (Variablen:
+     * $task, $schluessel, $feld, $wert = gespeicherter Rohwert) und pflegt den
+     * Wert über eigene Routen in ekkon_task_settings (task_key + schluessel);
+     * das Standardformular fasst solche Schlüssel nicht an. Gelesen wird wie
+     * immer mit $this->einstellung('gruppen') als Text.
      *
      * Warum überhaupt: Die `.env` beschreibt, WO eine Instanz läuft. Was jemand
      * fachlich entscheidet, gehört ins Backend – dort sieht man es, kann es

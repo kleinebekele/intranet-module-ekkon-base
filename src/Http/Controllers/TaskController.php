@@ -181,6 +181,9 @@ class TaskController extends Controller
         $task = $this->findOrAbort($group, $name);
 
         foreach ($task->einstellungen as $schluessel => $deklaration) {
+            if (($deklaration['typ'] ?? 'text') === 'view') {
+                continue;   // pflegt das Fachmodul über eigene Routen, nicht dieses Formular
+            }
             $wert = match ($deklaration['typ'] ?? 'text') {
                 // Ein nicht gesetztes Häkchen schickt der Browser gar nicht mit.
                 'ja_nein' => $request->boolean("einstellungen.{$schluessel}") ? '1' : '0',

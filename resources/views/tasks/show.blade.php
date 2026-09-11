@@ -124,6 +124,8 @@
                                     @php
                                         $wert = $einstellungen[$schluessel] ?? ($feld['standard'] ?? null);
                                     @endphp
+                                    {{-- typ "view": eigene Bedienung des Tasks, kommt unter das Formular --}}
+                                    @continue(($feld['typ'] ?? 'text') === 'view')
 
                                     <div>
                                         @if (($feld['typ'] ?? 'text') === 'ja_nein')
@@ -167,6 +169,23 @@
                                 Einstellungen speichern
                             </button>
                         </form>
+
+                        {{-- Einstellungen vom typ "view": der Task bringt seine eigene
+                             Bedienung mit (eigene Formulare/Routen im Fachmodul) und
+                             bekommt den gespeicherten Rohwert. --}}
+                        @foreach ($task->einstellungen as $schluessel => $feld)
+                            @if (($feld['typ'] ?? 'text') === 'view' && ! empty($feld['view']))
+                                <div class="mt-6 border-t border-gray-200 pt-4">
+                                    @include($feld['view'], [
+                                        'task' => $task,
+                                        'schluessel' => $schluessel,
+                                        'feld' => $feld,
+                                        'wert' => $einstellungen[$schluessel] ?? ($feld['standard'] ?? ''),
+                                        'einstellungen' => $einstellungen,
+                                    ])
+                                </div>
+                            @endif
+                        @endforeach
                     </div>
                 @endif
 
