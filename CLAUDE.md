@@ -71,7 +71,8 @@ bewusst dumm (`src/Tasks/Notifications/SendNotifications.php`).
 ## Webhook-Eingang
 
 `POST /webhooks/ekkon/{schluessel}` (Route `ekkon.webhook.empfangen`, bewusst OHNE `web`-Middleware:
-keine Session, kein CSRF; Drossel 120/min). Der Schlüssel in der URL ist das Passwort, unbekannt/inaktiv
+keine Session, kein CSRF; Drossel 600/min – Carrier-Push-Dienste schicken je Ereignis eine Nachricht,
+in Wellen). Der Schlüssel in der URL ist das Passwort, unbekannt/inaktiv
 → 404. Alles wird roh gespeichert (`ekkon_webhook_eingaenge`: Header ohne Authorization/Cookie, Body
 bis 1 MB, IP gekürzt); Admin-Seite „Webhook-Eingang" zeigt und löscht. Fachlogik (z. B. Sally.io-
 Zusammenfassungen nach Titel routen) kommt als Task obendrauf, nicht in den Empfang.

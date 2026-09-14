@@ -54,7 +54,9 @@ Route::middleware(['web', 'auth'])
 // Öffentlicher Empfang: bewusst OHNE 'web' (keine Session, kein CSRF) – der
 // Absender ist ein fremder Dienst. Der Schlüssel in der URL ist die Zugangsprüfung,
 // die Drossel fängt Dauerfeuer ab. Name ohne 'module.'-Präfix, damit die
-// Modul-Zugriffsprüfung des Cores hier nicht greift.
+// Modul-Zugriffsprüfung des Cores hier nicht greift. Die Drossel ist bewusst
+// weit: Carrier-Push-Dienste (DHL) schicken je Ereignis eine Nachricht und
+// morgens in Wellen; ein 429 kostet dort eine Stunde Wiederholung.
 Route::post('/webhooks/ekkon/{schluessel}', [WebhookController::class, 'empfangen'])
-    ->middleware('throttle:120,1')
+    ->middleware('throttle:600,1')
     ->name('ekkon.webhook.empfangen');
