@@ -30,7 +30,7 @@ class EkkonServiceProvider extends ModuleServiceProvider
             ->item('webhooks', 'Webhook-Eingang', 'module.ekkon.webhooks.index')
             // Werkzeug für alle, die Chips ausgeben: Kennung eines 125-kHz-Chips
             // in allen Schreibweisen. Rollen über die Modul-Verwaltung.
-            ->item('chip', 'Chip einlesen', 'module.ekkon.chip');
+            ->item('chip', 'Chip einlesen', 'module.ekkon.chip.index');
     }
 
     public function register(): void

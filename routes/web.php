@@ -13,7 +13,7 @@ Route::middleware(['web', 'auth'])
     ->group(function (): void {
         // „Chip einlesen": reine Anzeige-Seite ohne Daten, Zugriff über die
         // Rollen am Menüpunkt (Modul-Verwaltung), nicht nur Admins.
-        Route::get('/chip', [ChipController::class, 'index'])->name('chip');
+        Route::get('/chip', [ChipController::class, 'index'])->name('chip.index');
 
         // Task-System: bewusst HART nur für Administratoren (Betriebswerkzeug) —
         // unabhängig davon, was in der Modul-Verwaltung eingestellt wird.

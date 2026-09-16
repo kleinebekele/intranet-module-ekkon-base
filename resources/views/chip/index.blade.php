@@ -60,6 +60,12 @@
                 </table>
             </div>
 
+            {{-- Zusatz-Aktionen der Fachmodule (Support\ChipAktionen), z. B. Chip einem
+                 Konto in einem Fremdsystem zuordnen. Sehen `eingabe` und `werte`. --}}
+            @foreach ($aktionen ?? [] as $schluessel => $html)
+                <div x-show="werte" x-cloak data-chip-aktion="{{ $schluessel }}">{!! $html !!}</div>
+            @endforeach
+
             <div class="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600 space-y-2">
                 <p class="font-medium text-gray-800">Was steckt in der Kennung?</p>
                 <p>
