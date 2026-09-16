@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
+use Intranet\Modules\Ekkon\Http\Controllers\ChipController;
 use Intranet\Modules\Ekkon\Http\Controllers\NotificationController;
 use Intranet\Modules\Ekkon\Http\Controllers\TaskController;
 use Intranet\Modules\Ekkon\Http\Controllers\WebhookController;
@@ -10,6 +11,10 @@ Route::middleware(['web', 'auth'])
     ->prefix('modules/ekkon')
     ->name('module.ekkon.')
     ->group(function (): void {
+        // „Chip einlesen": reine Anzeige-Seite ohne Daten, Zugriff über die
+        // Rollen am Menüpunkt (Modul-Verwaltung), nicht nur Admins.
+        Route::get('/chip', [ChipController::class, 'index'])->name('chip');
+
         // Task-System: bewusst HART nur für Administratoren (Betriebswerkzeug) —
         // unabhängig davon, was in der Modul-Verwaltung eingestellt wird.
         Route::middleware(EnsureUserIsAdmin::class)->group(function (): void {
