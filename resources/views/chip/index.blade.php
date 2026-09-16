@@ -110,9 +110,11 @@
                 const dez = parseInt(hex8, 16);
                 const dezStr = String(dez);
                 this.werte = u;
-                this.eingabe = u;
+                // Das Feld zeigt weiter, was gelesen bzw. eingegeben wurde – ein
+                // erneutes „Umrechnen" rechnet dann mit denselben Rohdaten.
+                this.eingabe = (raw || '').trim();
                 this.zeilen = [
-                    { titel: 'Rohdaten vom Leser', wert: (raw || '').trim(), herleitung: 'so wie der Leser es sendet (0 + Kennung + Prüfzeichen)' },
+                    { titel: 'Rohdaten', wert: this.eingabe, herleitung: 'so wie gelesen bzw. eingegeben (Leser: 0 + Kennung + Prüfzeichen)' },
                     { titel: 'Intranet / Kantine (UID)', wert: u, herleitung: 'die 10 Hex ohne führende 0 und ohne Prüfzeichen' },
                     { titel: 'LCN-Pro Busmonitor', wert: hex8, herleitung: 'letzte 8 Hex (ohne Versionsbyte ' + u.slice(0, 2) + ')' },
                     { titel: 'LCN-Schlüssel', wert: u.slice(-6), herleitung: 'letzte 6 Hex (3 Bytes)' },
