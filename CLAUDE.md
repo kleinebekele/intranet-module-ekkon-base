@@ -84,18 +84,6 @@ firmenneutral): `Webhooks/SallyZusammenfassung` (alle 5 Min): erkennt Sally-Eing
 `ohne_ziel`, danach Route anlegen). Benachrichtigungen tragen seitdem optional `html`: Mail = HTML +
 Klartext (`VorlagenMailer` mit `$textWerte`), Teams = Markdown (`SupportHtmlText`).
 
-## Chip einlesen
-
-Seite `module.ekkon.chip.index` (Rollen am Menüpunkt, nicht Admin-only): liest einen
-125-kHz-Chip (EM4100) per Web Serial (serieller Leser, Rahmen `STX` `0` + 10 Hex + Prüfzeichen
-`ETX CR LF`) oder Tastatur-Leser und zeigt die Kennung in allen Schreibweisen. Speichert nichts.
-
-Was mit der Kennung in einem Fremdsystem passiert, ist Sache der Fachmodule:
-`Support\ChipAktionen::registrieren('schluessel', fn () => view(...))` im `boot()` liefert ein
-Stück HTML unter der Tabelle (innerhalb der Alpine-Komponente: `eingabe` = Rohdaten, `werte` =
-bereinigte UID). Eigene Routen des Fachmoduls unter `module.ekkon.chip.*` benennen — die erben
-über den Ressourcen-Präfix die Rollen des Menüpunkts.
-
 ## Sicherheitsschalter
 
 Ohne **`EKKON_TASKS_ENABLED=true`** läuft **kein** Task — auch nicht „jetzt ausführen" in der

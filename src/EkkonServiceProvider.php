@@ -27,10 +27,7 @@ class EkkonServiceProvider extends ModuleServiceProvider
             // EnsureUserIsAdmin (Webhook-URLs sind Passwörter). Neuer Menüpunkt
             // startet ohne Rollen = nur Admin – passt.
             ->item('notifications', 'Benachrichtigungen', 'module.ekkon.notifications.index')
-            ->item('webhooks', 'Webhook-Eingang', 'module.ekkon.webhooks.index')
-            // Werkzeug für alle, die Chips ausgeben: Kennung eines 125-kHz-Chips
-            // in allen Schreibweisen. Rollen über die Modul-Verwaltung.
-            ->item('chip', 'Chip einlesen', 'module.ekkon.chip.index');
+            ->item('webhooks', 'Webhook-Eingang', 'module.ekkon.webhooks.index');
     }
 
     public function register(): void
