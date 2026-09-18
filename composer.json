@@ -1,23 +1,11 @@
 {
     "name": "do1emu/module-ekkon",
-    "description": "Ekkon – Task-System mit Lauf-Historie und MSSQL-Anbindung als Modul für die Intranet-Plattform.",
-    "type": "library",
+    "description": "Übergangspaket ohne Code: Ekkon (Task-System, Benachrichtigungen, Webhook-Eingang) ist fester Bestandteil der Intranet-Plattform. Das Paket erfüllt nur noch bestehende require-Einträge.",
+    "type": "metapackage",
     "license": "MIT",
-    "keywords": ["laravel", "intranet", "tasks", "scheduler", "mssql"],
+    "keywords": ["laravel", "intranet", "tasks", "scheduler"],
     "require": {
         "php": "^8.3"
-    },
-    "autoload": {
-        "psr-4": {
-            "Intranet\\Modules\\Ekkon\\": "src/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Intranet\\Modules\\Ekkon\\EkkonServiceProvider"
-            ]
-        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true
